@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Anybody:wght@700;800;900&display=swap');
+
+:root {
+  --darkest: #06060C;
+  --dark: #0C0D16;
+  --surface: #131520;
+  --surface-alt: #181B28;
+  --border: #252840;
+  --border-light: #323660;
+  --gold: #D4A843;
+  --gold-light: #F0D078;
+  --gold-dim: #9A7B2F;
+  --cyan: #00F0FF;
+  --magenta: #FF2E97;
+  --green: #39FF14;
+  --red: #FF3B5C;
+  --text1: #F0ECE2;
+  --text2: #8B8DA3;
+  --text3: #4A4D65;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Chakra Petch', sans-serif;
+  background: var(--darkest);
+  color: var(--text1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Focus visible for keyboard accessibility */
+*:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+/* Remove default focus for mouse users */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Scrollbar hiding */
+.hide-sb::-webkit-scrollbar { display: none; }
+.hide-sb { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Selection */
+::selection {
+  background: rgba(212, 168, 67, 0.3);
+  color: var(--text1);
+}
