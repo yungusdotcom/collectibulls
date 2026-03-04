@@ -153,6 +153,52 @@ const AchievementIcon = ({ icon, unlocked, size = 20 }) => {
   return <svg width={size} height={size} viewBox="0 0 24 24" style={{ opacity: o }}>{m[icon]}</svg>;
 };
 
+// ─── Bull Logo Mark ───
+const BullLogo = ({ size = 40 }) => {
+  const scale = size / 240;
+  return (
+    <svg width={size} height={size * 0.83} viewBox="0 0 240 200" aria-label="Collectibulls logo" role="img">
+      <defs>
+        <linearGradient id="blg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={c.goldLight}/>
+          <stop offset="50%" stopColor={c.gold}/>
+          <stop offset="100%" stopColor={c.goldDim}/>
+        </linearGradient>
+        <filter id="eyeGlow">
+          <feGaussianBlur stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      {/* Left horn */}
+      <path d="M72 78 C62 58, 38 20, 18 8 C14 5, 12 8, 16 14 C30 38, 48 62, 65 80" fill="url(#blg)" stroke={`${c.goldDim}`} strokeWidth="0.5"/>
+      {/* Right horn */}
+      <path d="M168 78 C178 58, 202 20, 222 8 C226 5, 228 8, 224 14 C210 38, 192 62, 175 80" fill="url(#blg)" stroke={`${c.goldDim}`} strokeWidth="0.5"/>
+      {/* Head shield */}
+      <path d="M72 80 C72 68, 88 55, 120 55 C152 55, 168 68, 168 80 L168 115 C168 125, 162 140, 148 150 C140 156, 132 162, 120 168 C108 162, 100 156, 92 150 C78 140, 72 125, 72 115 Z" fill="url(#blg)" stroke={`${c.goldLight}40`} strokeWidth="0.5"/>
+      {/* Inner face */}
+      <path d="M82 84 C82 75, 94 65, 120 65 C146 65, 158 75, 158 84 L158 112 C158 120, 153 133, 142 142 C136 147, 129 152, 120 157 C111 152, 104 147, 98 142 C87 133, 82 120, 82 112 Z" fill={c.dark}/>
+      {/* Left ear */}
+      <path d="M72 82 C65 75, 58 72, 54 76 C50 80, 55 88, 62 90 C66 91, 70 88, 72 85" fill="url(#blg)"/>
+      {/* Right ear */}
+      <path d="M168 82 C175 75, 182 72, 186 76 C190 80, 185 88, 178 90 C174 91, 170 88, 168 85" fill="url(#blg)"/>
+      {/* Left eye */}
+      <path d="M96 95 L106 90 L110 98 L104 104 Z" fill={c.cyan} filter="url(#eyeGlow)"/>
+      {/* Right eye */}
+      <path d="M144 95 L134 90 L130 98 L136 104 Z" fill={c.cyan} filter="url(#eyeGlow)"/>
+      {/* Nose bridge */}
+      <path d="M114 108 L120 105 L126 108" fill="none" stroke={`${c.gold}60`} strokeWidth="1.5" strokeLinecap="round"/>
+      {/* Nostrils */}
+      <ellipse cx="108" cy="125" rx="5" ry="3.5" fill={`${c.gold}30`} stroke={`${c.gold}50`} strokeWidth="1"/>
+      <ellipse cx="132" cy="125" rx="5" ry="3.5" fill={`${c.gold}30`} stroke={`${c.gold}50`} strokeWidth="1"/>
+      {/* Nose ring */}
+      <path d="M112 130 C112 140, 120 146, 120 146 C120 146, 128 140, 128 130" fill="none" stroke="url(#blg)" strokeWidth="2.5" strokeLinecap="round"/>
+      <circle cx="120" cy="146" r="2" fill={c.goldLight}/>
+      {/* Forehead diamond */}
+      <path d="M120 72 L124 78 L120 84 L116 78 Z" fill={`${c.cyan}40`} stroke={`${c.cyan}60`} strokeWidth="0.5"/>
+    </svg>
+  );
+};
+
 /* ═══════════════════════════════════════════
    HOME SCREEN
    ═══════════════════════════════════════════ */
@@ -169,12 +215,15 @@ function HomeScreen({ vaultData, tradeData }) {
     <div>
       {/* Header */}
       <div className="slide-up d1" style={{ padding: "20px 20px 0" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 500 }}>DASHBOARD</p>
-            <div style={{ marginTop: "6px" }}>
-              <span className="gold-shimmer" style={{ fontSize: "22px", fontWeight: 800, fontFamily: "'Anybody', sans-serif", letterSpacing: "1px" }}>COLLECTI</span>
-              <span style={{ fontSize: "22px", fontWeight: 800, fontFamily: "'Anybody', sans-serif", letterSpacing: "1px", color: c.cyan, textShadow: `0 0 20px ${c.cyan}30` }}>BULLS</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <BullLogo size={44}/>
+            <div>
+              <div style={{ lineHeight: 1 }}>
+                <span className="gold-shimmer" style={{ fontSize: "22px", fontWeight: 800, fontFamily: "'Anybody', sans-serif", letterSpacing: "1px" }}>COLLECTI</span>
+                <span style={{ fontSize: "22px", fontWeight: 800, fontFamily: "'Anybody', sans-serif", letterSpacing: "1px", color: c.cyan, textShadow: `0 0 20px ${c.cyan}30` }}>BULLS</span>
+              </div>
+              <p style={{ margin: 0, fontSize: "7px", letterSpacing: "5px", color: c.text3, fontWeight: 500, marginTop: "2px" }}>TRACK {"\u00B7"} TRADE {"\u00B7"} TRIUMPH</p>
             </div>
           </div>
           <div style={{ width: "38px", height: "38px", borderRadius: "4px", background: c.surface, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}>
