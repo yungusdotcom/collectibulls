@@ -4,7 +4,7 @@ export const metadata = {
   title: "Collectibulls — Track. Trade. Triumph.",
   description:
     "Premium trading card portfolio tracker. Monitor your collection value, log trades, and track market trends.",
-  metadataBase: new URL("https://collectibulls.vercel.app"),
+  metadataBase: new URL("https://collectibulls.io"),
   openGraph: {
     title: "Collectibulls",
     description: "Premium trading card portfolio tracker.",
