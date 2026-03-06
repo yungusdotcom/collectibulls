@@ -1000,9 +1000,9 @@ export default function App() {
         {/* Main Content Area */}
         <div style={{
           flex: 1,
-          marginLeft: isDesktop ? "220px" : 0,
+          marginLeft: isDesktop ? "220px" : "auto",
+          marginRight: isDesktop ? "0" : "auto",
           maxWidth: isDesktop ? "none" : "480px",
-          margin: isDesktop ? undefined : "0 auto",
           position: "relative",
           paddingBottom: isDesktop ? "0" : "84px",
           minHeight: "100vh",
