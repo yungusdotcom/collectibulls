@@ -873,10 +873,79 @@ const tabList = [
   { id: "trade", label: "Trade" }, { id: "search", label: "Search" }, { id: "profile", label: "Profile" },
 ];
 
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    setIsDesktop(mq.matches);
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isDesktop;
+}
+
+function DesktopSidebar({ activeTab, setActiveTab }) {
+  return (
+    <nav aria-label="Main navigation" style={{
+      width: "220px", minHeight: "100vh", position: "fixed", left: 0, top: 0,
+      background: `linear-gradient(180deg, ${c.dark}, ${c.darkest})`,
+      borderRight: `1px solid ${c.border}40`,
+      padding: "28px 0", display: "flex", flexDirection: "column",
+      zIndex: 100,
+    }}>
+      {/* Logo */}
+      <div style={{ padding: "0 24px 28px", borderBottom: `1px solid ${c.border}30` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <BullLogo size={36}/>
+          <div>
+            <div style={{ lineHeight: 1 }}>
+              <span className="gold-shimmer" style={{ fontSize: "15px", fontWeight: 800, fontFamily: "'Anybody', sans-serif", letterSpacing: "0.5px" }}>COLLECTI</span>
+              <span style={{ fontSize: "15px", fontWeight: 800, fontFamily: "'Anybody', sans-serif", letterSpacing: "0.5px", color: c.cyan }}>BULLS</span>
+            </div>
+            <p style={{ margin: 0, fontSize: "6px", letterSpacing: "4px", color: c.text3, fontWeight: 500, marginTop: "2px" }}>TRACK {"\u00B7"} TRADE {"\u00B7"} TRIUMPH</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Nav Items */}
+      <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+        {tabList.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" aria-selected={isActive} style={{
+              display: "flex", alignItems: "center", gap: "12px",
+              padding: "12px 16px", border: "none", cursor: "pointer",
+              background: isActive ? `${c.gold}10` : "transparent",
+              borderLeft: isActive ? `2px solid ${c.gold}` : "2px solid transparent",
+              borderRadius: "0 4px 4px 0", transition: "all 0.15s ease",
+              position: "relative",
+            }}>
+              {isActive && <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg, ${c.gold}08, transparent)`, borderRadius: "0 4px 4px 0", pointerEvents: "none" }}/>}
+              <TabIcon id={tab.id} active={isActive}/>
+              <span style={{
+                fontSize: "11px", fontWeight: isActive ? 700 : 500, letterSpacing: "1.5px",
+                color: isActive ? c.gold : c.text3, fontFamily: "'Chakra Petch', sans-serif",
+                position: "relative",
+              }}>{tab.label.toUpperCase()}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: "16px 24px", borderTop: `1px solid ${c.border}30` }}>
+        <p style={{ margin: 0, fontSize: "8px", letterSpacing: "1.5px", color: c.text3 }}>COLLECTIBULLS v1.0.0</p>
+      </div>
+    </nav>
+  );
+}
+
 export default function App() {
   const [activeTab, setActiveTab, tabLoaded] = usePersistedState("collectibulls:active-tab", "home");
   const [sharedVault, setSharedVault, vaultLoaded] = usePersistedState("collectibulls:vault-cards", defaultVaultCards);
   const [sharedTrades, setSharedTrades, tradesLoaded] = usePersistedState("collectibulls:trade-log", defaultTradeTx);
+  const isDesktop = useIsDesktop();
 
   const dataReady = vaultLoaded && tradesLoaded;
 
@@ -906,45 +975,104 @@ export default function App() {
         .hide-sb::-webkit-scrollbar{display:none}.hide-sb{-ms-overflow-style:none;scrollbar-width:none}
         input::placeholder,textarea::placeholder{color:${c.text3}}
         select{appearance:none;-webkit-appearance:none}
+
+        /* Desktop grid helpers */
+        @media (min-width: 768px) {
+          .desktop-grid-2 { display: grid !important; grid-template-columns: 1fr 1fr; gap: 20px; }
+          .desktop-grid-3 { display: grid !important; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+          .desktop-grid-4 { display: grid !important; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+          .vault-grid-desktop { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; }
+        }
       `}</style>
 
       <div style={{
         minHeight: "100vh", background: c.darkest, color: c.text1,
-        fontFamily: "'Chakra Petch', sans-serif", maxWidth: "480px",
-        margin: "0 auto", position: "relative", paddingBottom: "84px",
+        fontFamily: "'Chakra Petch', sans-serif",
+        display: "flex",
       }}>
-        {/* Ambient glow */}
-        <div style={{ position: "absolute", top: "-100px", left: "50%", transform: "translateX(-50%)", width: "400px", height: "300px", background: `radial-gradient(ellipse, ${c.gold}06 0%, transparent 70%)`, pointerEvents: "none" }}/>
+        {/* Desktop Sidebar */}
+        {isDesktop && <DesktopSidebar activeTab={activeTab} setActiveTab={setActiveTab} />}
 
-        {/* Active Screen */}
-        {activeTab === "home" && <HomeScreen vaultData={sharedVault} tradeData={sharedTrades} />}
-        {activeTab === "collection" && <VaultScreen sharedCards={sharedVault} setSharedCards={setSharedVault} />}
-        {activeTab === "trade" && <TradeScreen sharedTrades={sharedTrades} setSharedTrades={setSharedTrades} />}
-        {activeTab === "search" && <SearchScreen />}
-        {activeTab === "profile" && <ProfileScreen vaultData={sharedVault} tradeData={sharedTrades} />}
-
-        {/* Bottom Tab Bar */}
+        {/* Main Content Area */}
         <div style={{
-          position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-          width: "100%", maxWidth: "480px",
-          background: `${c.darkest}EE`, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
-          borderTop: `1px solid ${c.border}40`,
-          padding: "6px 4px 22px", display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 100,
+          flex: 1,
+          marginLeft: isDesktop ? "220px" : 0,
+          maxWidth: isDesktop ? "none" : "480px",
+          margin: isDesktop ? undefined : "0 auto",
+          position: "relative",
+          paddingBottom: isDesktop ? "0" : "84px",
+          minHeight: "100vh",
+          overflow: isDesktop ? "auto" : undefined,
         }}>
-          {tabList.map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
-                background: "none", border: "none", cursor: "pointer", padding: "6px 14px", position: "relative",
-              }}>
-                {isActive && <div style={{ position: "absolute", top: "-6px", left: "50%", transform: "translateX(-50%)", width: "24px", height: "2px", background: c.gold, boxShadow: `0 0 10px ${c.gold}60` }}/>}
-                <TabIcon id={tab.id} active={isActive}/>
-                <span style={{ fontSize: "8px", fontWeight: 600, letterSpacing: "1.5px", color: isActive ? c.gold : c.text3, textShadow: isActive ? `0 0 8px ${c.gold}30` : "none" }}>{tab.label.toUpperCase()}</span>
-              </button>
-            );
-          })}
+          {/* Ambient glow */}
+          <div style={{ position: "absolute", top: "-100px", left: "50%", transform: "translateX(-50%)", width: "400px", height: "300px", background: `radial-gradient(ellipse, ${c.gold}06 0%, transparent 70%)`, pointerEvents: "none" }}/>
+
+          {/* Desktop top bar */}
+          {isDesktop && (
+            <div style={{
+              position: "sticky", top: 0, zIndex: 50,
+              padding: "16px 32px",
+              background: `${c.darkest}EE`, backdropFilter: "blur(16px)",
+              borderBottom: `1px solid ${c.border}30`,
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+            }}>
+              <div>
+                <p style={{ margin: 0, fontSize: "9px", letterSpacing: "3px", color: c.text3, fontWeight: 500 }}>
+                  {tabList.find(t => t.id === activeTab)?.label.toUpperCase() || ""}
+                </p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{
+                  width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center",
+                  background: c.surface, cursor: "pointer", borderRadius: "4px",
+                  border: `1px solid ${c.border}40`,
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke={c.text2} strokeWidth="1.8" strokeLinecap="round"/><path d="M13.73 21a2 2 0 01-3.46 0" stroke={c.text2} strokeWidth="1.8" strokeLinecap="round"/></svg>
+                </div>
+                <div style={{
+                  width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center",
+                  background: `${c.gold}15`, borderRadius: "4px", border: `1px solid ${c.gold}20`,
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="4" stroke={c.gold} strokeWidth="1.8" fill="none"/><path d="M5 20C5 17 8 14.5 12 14.5C16 14.5 19 17 19 20" stroke={c.gold} strokeWidth="1.8" fill="none" strokeLinecap="round"/></svg>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Screen Content */}
+          <div style={{ padding: isDesktop ? "24px 32px" : "0" }}>
+            {activeTab === "home" && <HomeScreen vaultData={sharedVault} tradeData={sharedTrades} />}
+            {activeTab === "collection" && <VaultScreen sharedCards={sharedVault} setSharedCards={setSharedVault} />}
+            {activeTab === "trade" && <TradeScreen sharedTrades={sharedTrades} setSharedTrades={setSharedTrades} />}
+            {activeTab === "search" && <SearchScreen />}
+            {activeTab === "profile" && <ProfileScreen vaultData={sharedVault} tradeData={sharedTrades} />}
+          </div>
         </div>
+
+        {/* Mobile Bottom Tab Bar */}
+        {!isDesktop && (
+          <div style={{
+            position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+            width: "100%", maxWidth: "480px",
+            background: `${c.darkest}EE`, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+            borderTop: `1px solid ${c.border}40`,
+            padding: "6px 4px 22px", display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 100,
+          }}>
+            {tabList.map(tab => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+                  background: "none", border: "none", cursor: "pointer", padding: "6px 14px", position: "relative",
+                }}>
+                  {isActive && <div style={{ position: "absolute", top: "-6px", left: "50%", transform: "translateX(-50%)", width: "24px", height: "2px", background: c.gold, boxShadow: `0 0 10px ${c.gold}60` }}/>}
+                  <TabIcon id={tab.id} active={isActive}/>
+                  <span style={{ fontSize: "8px", fontWeight: 600, letterSpacing: "1.5px", color: isActive ? c.gold : c.text3, textShadow: isActive ? `0 0 8px ${c.gold}30` : "none" }}>{tab.label.toUpperCase()}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </>
   );
