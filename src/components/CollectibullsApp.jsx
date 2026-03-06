@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { usePersistedState } from "@/lib/usePersistedState";
 import { c, catColors, defaultVaultCards, defaultTradeTx, trendData, achievementData, categories, gradeOptions, sortOptions, formatDate, formatDateLong } from "@/lib/constants";
@@ -795,12 +795,52 @@ function ProfileScreen({ vaultData, tradeData }) {
     notifications: true, priceAlerts: true, darkMode: true
   });
   const [profile, setProfile, profileLoaded] = usePersistedState("collectibulls:profile", {
-    username: "VaultMaster_X", bio: "Pokemon, MTG, and sports card enthusiast. Building the ultimate vault.", since: "2025"
+    username: "VaultMaster_X", bio: "Pokemon, MTG, and sports card enthusiast. Building the ultimate vault.", since: "2025", pfp: null
   });
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editUsername, setEditUsername] = useState(profile.username);
   const [editBio, setEditBio] = useState(profile.bio);
+  const [editPfp, setEditPfp] = useState(profile.pfp);
+  const [usernameError, setUsernameError] = useState("");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const RESERVED_NAMES = ["admin","collectibulls","system","moderator","support","help","null","undefined","test","root"];
+
+  const validateUsername = (name) => {
+    const safe = name.replace(/[<>"'&]/g, "").trim();
+    if (!safe) return "Username is required";
+    if (safe.length < 3) return "Username must be at least 3 characters";
+    if (safe.length > 30) return "Username must be 30 characters or less";
+    if (!/^[a-zA-Z0-9_.\- ]+$/.test(safe)) return "Only letters, numbers, underscores, hyphens, and dots";
+    if (RESERVED_NAMES.includes(safe.toLowerCase())) return "That username is reserved";
+    return "";
+  };
+
+  const handlePfpUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 2 * 1024 * 1024) { alert("Image must be under 2MB"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const size = 200;
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        const scale = Math.max(size / img.width, size / img.height);
+        const x = (size - img.width * scale) / 2;
+        const y = (size - img.height * scale) / 2;
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        setEditPfp(dataUrl);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const notifications = settings.notifications;
   const priceAlerts = settings.priceAlerts;
@@ -815,9 +855,10 @@ function ProfileScreen({ vaultData, tradeData }) {
   const handleSaveProfile = () => {
     const safeName = editUsername.replace(/[<>"'&]/g, "").trim().slice(0, 30);
     const safeBio = editBio.replace(/[<>"'&]/g, "").trim().slice(0, 200);
-    if (safeName) {
-      setProfile(prev => ({ ...prev, username: safeName, bio: safeBio }));
-    }
+    const err = validateUsername(safeName);
+    if (err) { setUsernameError(err); return; }
+    setUsernameError("");
+    setProfile(prev => ({ ...prev, username: safeName, bio: safeBio, pfp: editPfp }));
     setShowEditProfile(false);
   };
 
@@ -858,8 +899,12 @@ function ProfileScreen({ vaultData, tradeData }) {
           <div style={{ position: "absolute", top: 0, right: "14px", width: "1px", height: "30px", background: `linear-gradient(180deg, ${c.gold}60, transparent)` }}/>
           <div style={{ position: "absolute", top: "14px", right: 0, width: "30px", height: "1px", background: `linear-gradient(270deg, ${c.gold}60, transparent)` }}/>
           <div style={{ display: "flex", gap: "18px", alignItems: "center" }}>
-            <div style={{ width: "72px", height: "72px", flexShrink: 0, clipPath: "polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))", background: `linear-gradient(135deg, ${c.gold}25, ${c.surface})`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="4.5" stroke={c.gold} strokeWidth="1.8" fill={`${c.gold}15`}/><path d="M4 21C4 17.5 7.5 14.5 12 14.5C16.5 14.5 20 17.5 20 21" stroke={c.gold} strokeWidth="1.8" fill="none" strokeLinecap="round"/></svg>
+            <div style={{ width: "72px", height: "72px", flexShrink: 0, clipPath: "polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))", background: `linear-gradient(135deg, ${c.gold}25, ${c.surface})`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+              {profile.pfp ? (
+                <img src={profile.pfp} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
+              ) : (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="4.5" stroke={c.gold} strokeWidth="1.8" fill={`${c.gold}15`}/><path d="M4 21C4 17.5 7.5 14.5 12 14.5C16.5 14.5 20 17.5 20 21" stroke={c.gold} strokeWidth="1.8" fill="none" strokeLinecap="round"/></svg>
+              )}
               <div style={{ position: "absolute", bottom: "2px", right: "2px", width: "10px", height: "10px", borderRadius: "50%", background: c.green, border: `2px solid ${c.dark}`, boxShadow: `0 0 6px ${c.green}80` }}/>
             </div>
             <div style={{ flex: 1 }}>
@@ -868,7 +913,7 @@ function ProfileScreen({ vaultData, tradeData }) {
               <p style={{ margin: "6px 0 0", fontSize: "10px", color: c.text3, lineHeight: 1.5, fontWeight: 400 }}>{profile.bio}</p>
             </div>
           </div>
-          <button onClick={() => { setEditUsername(profile.username); setEditBio(profile.bio); setShowEditProfile(true); }} style={{ marginTop: "18px", width: "100%", padding: "10px", border: `1px solid ${c.cyan}35`, background: `${c.cyan}06`, cursor: "pointer", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+          <button onClick={() => { setEditUsername(profile.username); setEditBio(profile.bio); setEditPfp(profile.pfp); setUsernameError(""); setShowEditProfile(true); }} style={{ marginTop: "18px", width: "100%", padding: "10px", border: `1px solid ${c.cyan}35`, background: `${c.cyan}06`, cursor: "pointer", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M16.5 3.5L20.5 7.5L7 21H3V17L16.5 3.5Z" stroke={c.cyan} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "1.5px", color: c.cyan, fontFamily: "'Chakra Petch'" }}>EDIT PROFILE</span>
           </button>
@@ -962,8 +1007,31 @@ function ProfileScreen({ vaultData, tradeData }) {
                 <button onClick={() => setShowEditProfile(false)} style={{ background: `${c.darkest}80`, border: `1px solid ${c.border}`, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", borderRadius: "2px" }}><CloseIcon/></button>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div><label style={labelStyle}>USERNAME</label><input value={editUsername} onChange={e => setEditUsername(e.target.value)} maxLength={30} style={inputStyle}/></div>
-                <div><label style={labelStyle}>BIO</label><textarea value={editBio} onChange={e => setEditBio(e.target.value)} maxLength={200} rows={3} style={{ ...inputStyle, resize: "none", minHeight: "72px" }}/></div>
+                {/* PFP Upload */}
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  <div onClick={() => fileInputRef.current?.click()} style={{ width: "72px", height: "72px", flexShrink: 0, clipPath: "polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))", background: `linear-gradient(135deg, ${c.gold}25, ${c.surface})`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", overflow: "hidden", border: `1px solid ${c.gold}30` }}>
+                    {editPfp ? (
+                      <img src={editPfp} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
+                    ) : (
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke={c.gold} strokeWidth="2" strokeLinecap="round"/></svg>
+                    )}
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "3px", background: `${c.darkest}CC`, textAlign: "center" }}>
+                      <span style={{ fontSize: "6px", letterSpacing: "1px", color: c.gold, fontWeight: 600 }}>{editPfp ? "CHANGE" : "UPLOAD"}</span>
+                    </div>
+                  </div>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePfpUpload} style={{ display: "none" }}/>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontSize: "11px", color: c.text2, fontWeight: 500 }}>Profile Photo</p>
+                    <p style={{ margin: "3px 0 0", fontSize: "9px", color: c.text3 }}>JPG or PNG, max 2MB. Will be cropped to square.</p>
+                    {editPfp && <button onClick={() => setEditPfp(null)} style={{ marginTop: "6px", padding: "3px 10px", background: "none", border: `1px solid ${c.red}30`, color: c.red, fontSize: "8px", fontWeight: 600, letterSpacing: "1px", cursor: "pointer", fontFamily: "'Chakra Petch'" }}>REMOVE</button>}
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>USERNAME</label>
+                  <input value={editUsername} onChange={e => { setEditUsername(e.target.value); setUsernameError(""); }} maxLength={30} style={{ ...inputStyle, border: usernameError ? `1px solid ${c.red}` : `1px solid ${c.border}` }}/>
+                  {usernameError && <p style={{ margin: "4px 0 0", fontSize: "9px", color: c.red, fontWeight: 500 }}>{usernameError}</p>}
+                </div>
+                <div><label style={labelStyle}>BIO</label><textarea value={editBio} onChange={e => setEditBio(e.target.value)} maxLength={200} rows={3} style={{ ...inputStyle, resize: "none", minHeight: "72px" }}/><p style={{ margin: "4px 0 0", fontSize: "8px", color: c.text3, textAlign: "right" }}>{editBio.length}/200</p></div>
                 <button onClick={handleSaveProfile} style={{ width: "100%", padding: "14px", border: "none", cursor: "pointer", marginTop: "6px", background: `linear-gradient(135deg, ${c.gold}, ${c.goldDim})`, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))" }}>
                   <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "2px", color: c.darkest, fontFamily: "'Chakra Petch'" }}>SAVE PROFILE</span>
                 </button>
