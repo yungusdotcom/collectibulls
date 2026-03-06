@@ -75,6 +75,7 @@ const TabIcon = ({ id, active }) => {
     collection: <><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" stroke={s} strokeWidth={w} fill="none"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" stroke={s} strokeWidth={w} fill="none"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" stroke={s} strokeWidth={w} fill="none"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" stroke={s} strokeWidth={w} fill="none"/></>,
     trade: <><path d="M7 17L4 14L7 11" stroke={s} strokeWidth={w} fill="none" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 14H16" stroke={s} strokeWidth={w} fill="none" strokeLinecap="round"/><path d="M17 7L20 10L17 13" stroke={s} strokeWidth={w} fill="none" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 10H8" stroke={s} strokeWidth={w} fill="none" strokeLinecap="round"/></>,
     search: <><circle cx="11" cy="11" r="7" stroke={s} strokeWidth={w} fill="none"/><path d="M16.5 16.5L20 20" stroke={s} strokeWidth={w} strokeLinecap="round"/></>,
+    comps: <><path d="M3 3V21H21" stroke={s} strokeWidth={w} fill="none" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 14L11 8L15 12L20 5" stroke={s} strokeWidth={w} fill="none" strokeLinecap="round" strokeLinejoin="round"/><circle cx="7" cy="14" r="1.5" fill={s}/><circle cx="11" cy="8" r="1.5" fill={s}/><circle cx="15" cy="12" r="1.5" fill={s}/><circle cx="20" cy="5" r="1.5" fill={s}/></>,
     profile: <><circle cx="12" cy="9" r="4" stroke={s} strokeWidth={w} fill="none"/><path d="M5 20C5 17 8 14.5 12 14.5C16 14.5 19 17 19 20" stroke={s} strokeWidth={w} fill="none" strokeLinecap="round"/></>,
   };
   return <svg width="22" height="22" viewBox="0 0 24 24">{p[id]}</svg>;
@@ -851,19 +852,338 @@ function ProfileScreen({ vaultData, tradeData }) {
 }
 
 /* ═══════════════════════════════════════════
-   SEARCH PLACEHOLDER
+   COMPS TOOL
    ═══════════════════════════════════════════ */
 
-function SearchScreen() {
+const VERDICTS = [
+  { key: "steal", label: "STEAL", sub: "CHARGE!", color: c.green, bg: `${c.green}12`, border: `${c.green}30`, desc: "This is significantly below market value. Don't hesitate." },
+  { key: "good", label: "GOOD BUY", sub: "BULLISH", color: c.goldLight, bg: `${c.gold}12`, border: `${c.gold}30`, desc: "Solid price below market average. You're in good shape." },
+  { key: "fair", label: "FAIR PRICE", sub: "HOLD STEADY", color: c.cyan, bg: `${c.cyan}08`, border: `${c.cyan}25`, desc: "Right around market value. Not a steal, not a ripoff." },
+  { key: "over", label: "OVERPRICED", sub: "THINK TWICE", color: "#FF9500", bg: "rgba(255,149,0,0.08)", border: "rgba(255,149,0,0.25)", desc: "Above market value. You might find it cheaper elsewhere." },
+  { key: "walk", label: "WALK AWAY", sub: "NO BULL", color: c.red, bg: `${c.red}10`, border: `${c.red}25`, desc: "Way above market. Save your money for a better deal." },
+];
+
+function getVerdict(askingPrice, marketAvg) {
+  if (!askingPrice || !marketAvg || marketAvg === 0) return null;
+  const diff = ((askingPrice - marketAvg) / marketAvg) * 100;
+  if (diff <= -30) return VERDICTS[0]; // steal
+  if (diff <= -10) return VERDICTS[1]; // good buy
+  if (diff <= 10) return VERDICTS[2]; // fair
+  if (diff <= 25) return VERDICTS[3]; // overpriced
+  return VERDICTS[4]; // walk away
+}
+
+const VerdictIcon = ({ verdict, size = 48 }) => {
+  const col = verdict?.color || c.text3;
+  const icons = {
+    steal: <><path d="M12 4C8 4 4 7 4 12C4 17 8 20 12 20C16 20 20 17 20 12" stroke={col} strokeWidth="2" fill="none" strokeLinecap="round"/><path d="M20 4L12 12" stroke={col} strokeWidth="2.5" strokeLinecap="round"/><path d="M15 4H20V9" stroke={col} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></>,
+    good: <><path d="M12 3L14.5 8.5L20.5 9.2L16 13.5L17.2 19.5L12 16.5L6.8 19.5L8 13.5L3.5 9.2L9.5 8.5L12 3Z" stroke={col} strokeWidth="1.8" fill={`${col}20`} strokeLinejoin="round"/></>,
+    fair: <><path d="M5 12H19" stroke={col} strokeWidth="2" strokeLinecap="round"/><path d="M12 5V19" stroke={col} strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="12" r="9" stroke={col} strokeWidth="1.8" fill="none"/></>,
+    over: <><path d="M12 9V13" stroke={col} strokeWidth="2.5" strokeLinecap="round"/><circle cx="12" cy="17" r="1.5" fill={col}/><path d="M10.3 3.2L3.2 18.4C2.8 19.3 3.5 20 4.4 20H19.6C20.5 20 21.2 19.3 20.8 18.4L13.7 3.2C13.3 2.3 12.7 2 12 2C11.3 2 10.7 2.3 10.3 3.2Z" stroke={col} strokeWidth="1.8" fill="none" strokeLinejoin="round"/></>,
+    walk: <><path d="M18 6L6 18M6 6L18 18" stroke={col} strokeWidth="2.5" strokeLinecap="round"/><circle cx="12" cy="12" r="10" stroke={col} strokeWidth="1.8" fill="none"/></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none">{icons[verdict?.key] || null}</svg>;
+};
+
+function CompsScreen() {
+  const [query, setQuery] = useState("");
+  const [askingPrice, setAskingPrice] = useState("");
+  const [condition, setCondition] = useState("ungraded");
+  const [dealCheckMode, setDealCheckMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const [error, setError] = useState(null);
+  const [savedComps, setSavedComps, savedLoaded] = usePersistedState("collectibulls:saved-comps", []);
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+    setError(null);
+    setResults(null);
+    try {
+      const searchQuery = `${query.trim()} trading card ${condition !== "ungraded" ? condition : ""}`.trim();
+      const res = await fetch(`/api/ebay?q=${encodeURIComponent(searchQuery)}&limit=20&sort=price`);
+      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+
+      // Simulate graded vs ungraded breakdown from results
+      const allPrices = data.items.map(i => i.price?.value).filter(p => p > 0);
+      const gradedItems = data.items.filter(i => /psa|bgs|cgc|gem|mint/i.test(i.title));
+      const ungradedItems = data.items.filter(i => !/psa|bgs|cgc|gem|mint/i.test(i.title));
+      const gradedPrices = gradedItems.map(i => i.price?.value).filter(p => p > 0);
+      const ungradedPrices = ungradedItems.map(i => i.price?.value).filter(p => p > 0);
+
+      const calcStats = (prices) => {
+        if (!prices.length) return { avg: 0, min: 0, max: 0, median: 0, count: 0 };
+        const sorted = [...prices].sort((a,b) => a - b);
+        return {
+          avg: Math.round(sorted.reduce((s,p) => s+p, 0) / sorted.length),
+          min: sorted[0],
+          max: sorted[sorted.length - 1],
+          median: sorted[Math.floor(sorted.length / 2)],
+          count: sorted.length,
+        };
+      };
+
+      setResults({
+        query: data.query,
+        total: data.total,
+        items: data.items.slice(0, 8),
+        allStats: calcStats(allPrices),
+        gradedStats: calcStats(gradedPrices),
+        ungradedStats: calcStats(ungradedPrices),
+      });
+    } catch (e) {
+      setError("Failed to fetch comps. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verdict = dealCheckMode && results && askingPrice
+    ? getVerdict(parseFloat(askingPrice), condition === "ungraded" ? results.ungradedStats.avg || results.allStats.avg : results.gradedStats.avg || results.allStats.avg)
+    : null;
+
+  const saveComp = () => {
+    if (!results) return;
+    const comp = { id: Date.now(), query, askingPrice: askingPrice ? parseFloat(askingPrice) : null, condition, verdict: verdict?.key || null, marketAvg: results.allStats.avg, date: new Date().toISOString() };
+    setSavedComps(prev => [comp, ...prev].slice(0, 50));
+  };
+
+  const relevantStats = condition === "ungraded" && results?.ungradedStats?.count > 0
+    ? results.ungradedStats
+    : condition !== "ungraded" && results?.gradedStats?.count > 0
+    ? results.gradedStats
+    : results?.allStats;
+
   return (
-    <div style={{ padding: "20px", textAlign: "center" }}>
-      <p style={{ margin: "0 0 4px", fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 500 }}>DISCOVER</p>
-      <p style={{ margin: "0 0 40px", fontSize: "24px", fontWeight: 800, fontFamily: "'Anybody'", color: c.text1 }}>SEARCH</p>
-      <div style={{ padding: "60px 20px" }}>
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.2, margin: "0 auto 16px", display: "block" }}><circle cx="11" cy="11" r="8" stroke={c.text3} strokeWidth="1.8"/><path d="M17 17L21 21" stroke={c.text3} strokeWidth="1.8" strokeLinecap="round"/></svg>
-        <p style={{ fontSize: "14px", color: c.text3, fontWeight: 500 }}>Coming Soon</p>
-        <p style={{ fontSize: "11px", color: c.text3, fontWeight: 400, marginTop: "4px" }}>Browse and search card databases</p>
+    <div>
+      {/* Header */}
+      <div className="slide-up d1" style={{ padding: "20px 20px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 500 }}>MARKET INTELLIGENCE</p>
+            <p style={{ margin: "4px 0 0", fontSize: "24px", fontWeight: 800, fontFamily: "'Anybody'", color: c.text1, letterSpacing: "0.5px" }}>COMPS</p>
+          </div>
+          {savedComps.length > 0 && (
+            <div style={{ padding: "4px 10px", background: `${c.gold}10`, border: `1px solid ${c.gold}20`, fontSize: "9px", fontWeight: 600, color: c.gold, letterSpacing: "1px" }}>
+              {savedComps.length} SAVED
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Search + Deal Check */}
+      <div className="slide-up d2" style={{ padding: "16px 20px 0" }}>
+        {/* Search bar */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))" }}>
+            <SearchIconSvg/>
+            <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSearch()} placeholder="Search any card..." style={{ flex: 1, background: "none", border: "none", outline: "none", color: c.text1, fontSize: "13px", fontFamily: "'Chakra Petch'", fontWeight: 500 }}/>
+            {query && <button onClick={() => { setQuery(""); setResults(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}><CloseIcon/></button>}
+          </div>
+          <button onClick={handleSearch} disabled={!query.trim() || loading} style={{
+            padding: "12px 20px", border: "none", cursor: "pointer",
+            background: `linear-gradient(135deg, ${c.gold}, ${c.goldDim})`,
+            clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))",
+            opacity: !query.trim() || loading ? 0.4 : 1, transition: "opacity 0.2s",
+          }}>
+            <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: c.darkest, fontFamily: "'Chakra Petch'" }}>{loading ? "..." : "SEARCH"}</span>
+          </button>
+        </div>
+
+        {/* Deal Check Toggle */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "14px", padding: "12px 16px", background: dealCheckMode ? `${c.magenta}06` : c.surface, border: `1px solid ${dealCheckMode ? c.magenta + "25" : c.border}`, transition: "all 0.2s ease", borderRadius: "2px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2L15 8.5L22 9.3L17 14L18.2 21L12 17.5L5.8 21L7 14L2 9.3L9 8.5L12 2Z" stroke={dealCheckMode ? c.magenta : c.text3} strokeWidth="1.8" fill={dealCheckMode ? `${c.magenta}20` : "none"} strokeLinejoin="round"/></svg>
+            <div>
+              <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, color: dealCheckMode ? c.text1 : c.text2 }}>Deal Check Mode</p>
+              <p style={{ margin: "1px 0 0", fontSize: "9px", color: c.text3 }}>Enter asking price for a buy verdict</p>
+            </div>
+          </div>
+          <ToggleSwitch on={dealCheckMode} onToggle={() => setDealCheckMode(!dealCheckMode)}/>
+        </div>
+
+        {/* Deal Check Inputs */}
+        {dealCheckMode && (
+          <div style={{ display: "flex", gap: "8px", marginTop: "10px", animation: "fadeIn 0.2s ease" }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "14px", color: c.text3, fontWeight: 600 }}>$</span>
+              <input value={askingPrice} onChange={e => setAskingPrice(e.target.value)} type="number" placeholder="Asking price" style={{ width: "100%", padding: "12px 14px 12px 28px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "14px", fontWeight: 600, outline: "none", fontFamily: "'Chakra Petch'", boxSizing: "border-box", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}/>
+            </div>
+            <div style={{ display: "flex", gap: "4px" }}>
+              {["ungraded", "PSA 9", "PSA 10"].map(cond => (
+                <button key={cond} className="chip" onClick={() => setCondition(cond)} style={{
+                  padding: "8px 12px", fontSize: "8px", fontWeight: 600, letterSpacing: "1px", whiteSpace: "nowrap",
+                  background: condition === cond ? `${c.cyan}12` : c.surface,
+                  color: condition === cond ? c.cyan : c.text3,
+                  border: `1px solid ${condition === cond ? c.cyan + "30" : c.border}`,
+                  borderRadius: "1px",
+                }}>{cond.toUpperCase()}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div style={{ padding: "16px 20px" }}>
+          <div style={{ padding: "12px 16px", background: `${c.red}08`, border: `1px solid ${c.red}20`, borderRadius: "2px" }}>
+            <p style={{ margin: 0, fontSize: "11px", color: c.red, fontWeight: 500 }}>{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div style={{ padding: "60px 20px", textAlign: "center" }}>
+          <div style={{ width: "32px", height: "32px", border: `2px solid ${c.border}`, borderTop: `2px solid ${c.gold}`, borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.8s linear infinite" }}/>
+          <p style={{ fontSize: "11px", color: c.text3, letterSpacing: "1px" }}>PULLING COMPS...</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
+      {/* Results */}
+      {results && !loading && (
+        <div style={{ padding: "16px 20px" }}>
+          {/* Verdict Card (Deal Check Mode) */}
+          {verdict && (
+            <div className="slide-up d1" style={{ marginBottom: "16px" }}>
+              <div className="panel-clipped" style={{ padding: "24px 20px", background: `linear-gradient(165deg, ${c.surfaceAlt}, ${c.dark})`, position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: 0, left: 0, right: "14px", height: "2px", background: `linear-gradient(90deg, ${verdict.color}60, transparent)` }}/>
+                <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                  <div style={{ width: "64px", height: "64px", display: "flex", alignItems: "center", justifyContent: "center", background: verdict.bg, border: `1px solid ${verdict.border}`, borderRadius: "4px", flexShrink: 0 }}>
+                    <VerdictIcon verdict={verdict} size={32}/>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+                      <span style={{ fontSize: "24px", fontWeight: 800, fontFamily: "'Anybody'", color: verdict.color, letterSpacing: "1px" }}>{verdict.label}</span>
+                      <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "2px", color: `${verdict.color}80` }}>{verdict.sub}</span>
+                    </div>
+                    <p style={{ margin: "6px 0 0", fontSize: "11px", color: c.text2, lineHeight: 1.5 }}>{verdict.desc}</p>
+                    <div style={{ display: "flex", gap: "16px", marginTop: "10px" }}>
+                      <div><span style={{ fontSize: "8px", letterSpacing: "1.5px", color: c.text3, fontWeight: 600 }}>ASKING</span><p style={{ margin: "2px 0 0", fontSize: "16px", fontWeight: 700, color: c.text1 }}>${parseFloat(askingPrice).toLocaleString()}</p></div>
+                      <div><span style={{ fontSize: "8px", letterSpacing: "1.5px", color: c.text3, fontWeight: 600 }}>MARKET AVG</span><p style={{ margin: "2px 0 0", fontSize: "16px", fontWeight: 700, color: c.goldLight }}>${relevantStats?.avg?.toLocaleString() || "—"}</p></div>
+                      <div><span style={{ fontSize: "8px", letterSpacing: "1.5px", color: c.text3, fontWeight: 600 }}>DIFF</span><p style={{ margin: "2px 0 0", fontSize: "16px", fontWeight: 700, color: verdict.color }}>{relevantStats?.avg ? `${askingPrice < relevantStats.avg ? "-" : "+"}${Math.abs(Math.round(((parseFloat(askingPrice) - relevantStats.avg) / relevantStats.avg) * 100))}%` : "—"}</p></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Market Summary */}
+          <div className="slide-up d2">
+            <div className="panel" style={{ padding: "20px", background: `linear-gradient(180deg, ${c.surface}, ${c.dark})`, marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ width: "3px", height: "16px", background: c.cyan, borderRadius: "2px" }}/>
+                  <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>MARKET PRICING</p>
+                </div>
+                <span style={{ fontSize: "9px", color: c.text3 }}>{results.total.toLocaleString()} listings found</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr 1px 1fr 1px 1fr", gap: 0 }}>
+                {[{ l: "AVG", v: relevantStats?.avg },null,{ l: "MEDIAN", v: relevantStats?.median },null,{ l: "LOW", v: relevantStats?.min },null,{ l: "HIGH", v: relevantStats?.max }].map((s, i) =>
+                  s === null ? <div key={i} style={{ background: `linear-gradient(180deg, ${c.border}60, transparent)` }}/> :
+                  <div key={i} style={{ textAlign: "center", padding: "8px 4px" }}>
+                    <p style={{ margin: 0, fontSize: "7px", letterSpacing: "2px", color: c.text3, fontWeight: 600 }}>{s.l}</p>
+                    <p style={{ margin: "4px 0 0", fontSize: "18px", fontWeight: 700, color: i === 0 ? c.goldLight : c.text1 }}>${s.v?.toLocaleString() || "—"}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Graded vs Ungraded Breakdown */}
+          <div className="slide-up d3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "12px" }}>
+            {[
+              { label: "GRADED", stats: results.gradedStats, accent: c.gold },
+              { label: "UNGRADED", stats: results.ungradedStats, accent: c.cyan },
+            ].map((tier, i) => (
+              <div key={i} className="panel" style={{ padding: "16px", background: `linear-gradient(165deg, ${c.surfaceAlt}, ${c.dark})` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px" }}>
+                  <div style={{ width: "3px", height: "12px", background: tier.accent, borderRadius: "2px" }}/>
+                  <p style={{ margin: 0, fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600 }}>{tier.label}</p>
+                  <span style={{ fontSize: "8px", color: c.text3, marginLeft: "auto" }}>{tier.stats.count} found</span>
+                </div>
+                <p style={{ margin: 0, fontSize: "22px", fontWeight: 700, color: tier.accent }}>${tier.stats.avg?.toLocaleString() || "—"}</p>
+                <p style={{ margin: "2px 0 0", fontSize: "9px", color: c.text3 }}>avg price</p>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${c.border}30` }}>
+                  <div><p style={{ margin: 0, fontSize: "7px", color: c.text3, letterSpacing: "1px" }}>LOW</p><p style={{ margin: "2px 0 0", fontSize: "12px", fontWeight: 600, color: c.text1 }}>${tier.stats.min?.toLocaleString() || "—"}</p></div>
+                  <div style={{ textAlign: "right" }}><p style={{ margin: 0, fontSize: "7px", color: c.text3, letterSpacing: "1px" }}>HIGH</p><p style={{ margin: "2px 0 0", fontSize: "12px", fontWeight: 600, color: c.text1 }}>${tier.stats.max?.toLocaleString() || "—"}</p></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Similar Listings */}
+          <div className="slide-up d4">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "3px", height: "16px", background: c.magenta, borderRadius: "2px" }}/>
+                <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>SIMILAR LISTINGS</p>
+              </div>
+              <button onClick={saveComp} style={{ padding: "4px 12px", background: `${c.gold}10`, border: `1px solid ${c.gold}25`, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", borderRadius: "2px" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" stroke={c.gold} strokeWidth="1.8" fill="none"/></svg>
+                <span style={{ fontSize: "8px", fontWeight: 600, letterSpacing: "1px", color: c.gold }}>SAVE COMP</span>
+              </button>
+            </div>
+            <div className="hide-sb" style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "4px" }}>
+              {results.items.map((item, i) => (
+                <a key={i} href={item.itemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit", minWidth: "160px", flexShrink: 0 }}>
+                  <div className="mover-card" style={{ background: c.surface, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))" }}>
+                    {item.imageUrl && <div style={{ width: "100%", height: "100px", background: `url(${item.imageUrl}) center/cover`, borderBottom: `1px solid ${c.border}30` }}/>}
+                    <div style={{ padding: "10px 12px" }}>
+                      <p style={{ margin: 0, fontSize: "10px", fontWeight: 600, color: c.text1, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", minHeight: "26px" }}>{item.title}</p>
+                      <p style={{ margin: "6px 0 0", fontSize: "16px", fontWeight: 700, color: c.goldLight }}>${item.price?.value?.toLocaleString() || "—"}</p>
+                      {item.shippingCost != null && <p style={{ margin: "2px 0 0", fontSize: "8px", color: c.text3 }}>+${item.shippingCost} shipping</p>}
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Saved Comps */}
+          {savedComps.length > 0 && (
+            <div className="slide-up d5" style={{ marginTop: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                <div style={{ width: "3px", height: "16px", background: c.gold, borderRadius: "2px" }}/>
+                <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>SAVED COMPS</p>
+              </div>
+              {savedComps.slice(0, 5).map((comp, i) => {
+                const v = VERDICTS.find(vd => vd.key === comp.verdict);
+                return (
+                  <div key={comp.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: i < Math.min(savedComps.length, 5) - 1 ? `1px solid ${c.border}20` : "none" }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontSize: "12px", fontWeight: 600, color: c.text1 }}>{comp.query}</p>
+                      <p style={{ margin: "2px 0 0", fontSize: "9px", color: c.text3 }}>{formatDate(comp.date)} {"\u00B7"} {comp.condition}</p>
+                    </div>
+                    {comp.askingPrice && <span style={{ fontSize: "12px", fontWeight: 600, color: c.text2 }}>${comp.askingPrice.toLocaleString()}</span>}
+                    {v && <span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "1px", padding: "3px 8px", color: v.color, background: v.bg, border: `1px solid ${v.border}` }}>{v.label}</span>}
+                    <span style={{ fontSize: "11px", fontWeight: 600, color: c.goldLight }}>${comp.marketAvg?.toLocaleString()}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!results && !loading && !error && (
+        <div style={{ padding: "60px 20px", textAlign: "center" }}>
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.15, margin: "0 auto 20px", display: "block" }}>
+            <path d="M3 3V21H21" stroke={c.text3} strokeWidth="1.8" strokeLinecap="round"/>
+            <path d="M7 14L11 8L15 12L20 5" stroke={c.text3} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <p style={{ fontSize: "15px", color: c.text2, fontWeight: 600 }}>Pull real-time comps</p>
+          <p style={{ fontSize: "12px", color: c.text3, fontWeight: 400, marginTop: "6px", maxWidth: "280px", margin: "6px auto 0", lineHeight: 1.6 }}>
+            Search any trading card to see current market pricing. Turn on Deal Check to get a buy verdict.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -874,7 +1194,7 @@ function SearchScreen() {
 
 const tabList = [
   { id: "home", label: "Home" }, { id: "collection", label: "Vault" },
-  { id: "trade", label: "Trade" }, { id: "search", label: "Search" }, { id: "profile", label: "Profile" },
+  { id: "trade", label: "Trade" }, { id: "comps", label: "Comps" }, { id: "profile", label: "Profile" },
 ];
 
 function useIsDesktop() {
@@ -1048,7 +1368,7 @@ export default function App() {
             {activeTab === "home" && <HomeScreen vaultData={sharedVault} tradeData={sharedTrades} />}
             {activeTab === "collection" && <VaultScreen sharedCards={sharedVault} setSharedCards={setSharedVault} />}
             {activeTab === "trade" && <TradeScreen sharedTrades={sharedTrades} setSharedTrades={setSharedTrades} />}
-            {activeTab === "search" && <SearchScreen />}
+            {activeTab === "comps" && <CompsScreen />}
             {activeTab === "profile" && <ProfileScreen vaultData={sharedVault} tradeData={sharedTrades} />}
           </div>
         </div>
