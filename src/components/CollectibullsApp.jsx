@@ -204,7 +204,7 @@ const BullLogo = ({ size = 40 }) => {
    HOME SCREEN
    ═══════════════════════════════════════════ */
 
-function HomeScreen({ vaultData, tradeData }) {
+function HomeScreen({ vaultData, tradeData, onNavigate }) {
   const [trendPeriod, setTrendPeriod] = useState("6M");
   const totalCards = vaultData.length;
   const portfolioValue = vaultData.reduce((s, cd) => s + cd.value, 0);
@@ -314,7 +314,7 @@ function HomeScreen({ vaultData, tradeData }) {
         <div className="panel" style={{ padding: "22px 20px 12px", background: `linear-gradient(180deg, ${c.surface}, ${c.dark})` }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}><div style={{ width: "3px", height: "16px", background: c.magenta, borderRadius: "2px", boxShadow: `0 0 8px ${c.magenta}40` }}/><p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>TRANSACTIONS</p></div>
-            <span style={{ fontSize: "10px", color: c.cyan, cursor: "pointer", fontWeight: 600, letterSpacing: "1px", borderBottom: `1px solid ${c.cyan}30`, paddingBottom: "1px" }}>VIEW ALL</span>
+            <span onClick={() => onNavigate && onNavigate("trade")} style={{ fontSize: "10px", color: c.cyan, cursor: "pointer", fontWeight: 600, letterSpacing: "1px", borderBottom: `1px solid ${c.cyan}30`, paddingBottom: "1px" }}>VIEW ALL</span>
           </div>
           {recentTx.map((tx,i)=>{
             const isBuy=tx.type==="buy"; const cc=catColors[tx.category]||c.text3;
@@ -358,7 +358,34 @@ function VaultScreen({ sharedCards, setSharedCards }) {
   const [search, setSearch] = useState("");
   const [selectedCard, setSelectedCard] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addCategory, setAddCategory] = useState("Pokemon");
+  const [addGrade, setAddGrade] = useState("");
+  const [addValue, setAddValue] = useState("");
+  const [addNotes, setAddNotes] = useState("");
   const cards = sharedCards;
+
+  const handleAddCard = () => {
+    if (!addName.trim() || !addValue) return;
+    const newCard = {
+      id: Date.now(),
+      name: addName.replace(/[<>"'&]/g, "").trim().slice(0, 100),
+      category: addCategory,
+      grade: addGrade || "Ungraded",
+      condition: "Unknown",
+      value: parseFloat(addValue),
+      change: 0,
+      dateAdded: new Date().toISOString().split("T")[0],
+      set: "",
+      year: new Date().getFullYear(),
+      rarity: "",
+      notes: addNotes.replace(/[<>"'&]/g, "").trim().slice(0, 300),
+    };
+    setSharedCards(prev => [newCard, ...prev]);
+    setAddName(""); setAddCategory("Pokemon"); setAddGrade(""); setAddValue(""); setAddNotes("");
+    setShowAddCard(false);
+  };
 
   const filtered = useMemo(() => {
     let list = [...cards];
@@ -381,7 +408,10 @@ function VaultScreen({ sharedCards, setSharedCards }) {
       <div className="slide-up d1" style={{ padding: "20px 20px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div><p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 500 }}>YOUR COLLECTION</p><p style={{ margin: "4px 0 0", fontSize: "24px", fontWeight: 800, fontFamily: "'Anybody', sans-serif", color: c.text1, letterSpacing: "0.5px" }}>THE VAULT</p></div>
-          <div style={{ display: "flex", gap: "6px" }}>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <button onClick={() => setShowAddCard(true)} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 14px 8px 10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${c.gold}, ${c.goldDim})`, clipPath: "polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px))", boxShadow: `0 0 16px ${c.gold}15` }}>
+              <PlusIcon/><span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", color: c.darkest }}>ADD</span>
+            </button>
             {[["grid",GridIcon],["list",ListIconSvg]].map(([mode,Icon])=>(
               <button key={mode} onClick={()=>setViewMode(mode)} style={{ width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", background: viewMode===mode?`${c.gold}10`:c.surface, border: viewMode===mode?`1px solid ${c.gold}30`:`1px solid ${c.border}`, cursor: "pointer", clipPath: "polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px))" }}>
                 <Icon active={viewMode===mode}/>
@@ -531,6 +561,38 @@ function VaultScreen({ sharedCards, setSharedCards }) {
                   <p style={{ margin: "6px 0 0", fontSize: "12px", color: c.text2, lineHeight: 1.6, fontWeight: 400 }}>{selectedCard.notes}</p>
                 </div>
               )}
+              {/* Delete Card */}
+              <button onClick={() => { if (window.confirm(`Remove "${selectedCard.name}" from your vault?`)) { setSharedCards(prev => prev.filter(cd => cd.id !== selectedCard.id)); setSelectedCard(null); } }} style={{ marginTop: "20px", width: "100%", padding: "12px", border: `1px solid ${c.red}25`, background: `${c.red}06`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke={c.red} strokeWidth="1.8" fill="none" strokeLinecap="round"/></svg>
+                <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "1.5px", color: c.red, fontFamily: "'Chakra Petch'" }}>REMOVE FROM VAULT</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Card Modal */}
+      {showAddCard && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center", animation: "fadeIn 0.2s ease" }} onClick={() => setShowAddCard(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "480px", maxHeight: "90vh", overflowY: "auto", background: `linear-gradient(180deg, ${c.surfaceAlt}, ${c.dark})`, borderTop: `1px solid ${c.borderLight}40`, animation: "modalIn 0.3s ease forwards", clipPath: "polygon(0 12px, 12px 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%)", position: "relative" }}>
+            <div style={{ position: "absolute", top: 0, left: "12px", right: "12px", height: "1px", background: `linear-gradient(90deg, transparent, ${c.gold}50, transparent)` }}/>
+            <div style={{ padding: "24px 24px 32px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                <div><p style={{ margin: 0, fontSize: "9px", letterSpacing: "3px", color: c.text3 }}>NEW CARD</p><p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 800, fontFamily: "'Anybody'", color: c.text1 }}>ADD TO VAULT</p></div>
+                <button onClick={() => setShowAddCard(false)} style={{ background: `${c.darkest}80`, border: `1px solid ${c.border}`, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", borderRadius: "2px" }}><CloseIcon/></button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>CARD NAME</label><input value={addName} onChange={e => setAddName(e.target.value)} placeholder="e.g. Charizard 1st Edition" style={{ width: "100%", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "13px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}/></div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>CATEGORY</label><select value={addCategory} onChange={e => setAddCategory(e.target.value)} style={{ width: "100%", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "12px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", cursor: "pointer", appearance: "none", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}>{["Pokemon","Sports","MTG","Yu-Gi-Oh"].map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>
+                  <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>GRADE</label><input value={addGrade} onChange={e => setAddGrade(e.target.value)} placeholder="e.g. PSA 10" style={{ width: "100%", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "12px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}/></div>
+                </div>
+                <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>ESTIMATED VALUE</label><div style={{ position: "relative" }}><span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "14px", color: c.text3, fontWeight: 600 }}>$</span><input value={addValue} onChange={e => setAddValue(e.target.value)} type="number" placeholder="0.00" style={{ width: "100%", padding: "12px 14px 12px 28px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "14px", fontWeight: 600, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}/></div></div>
+                <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>NOTES (OPTIONAL)</label><input value={addNotes} onChange={e => setAddNotes(e.target.value)} placeholder="Set, variant, condition details..." style={{ width: "100%", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "12px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}/></div>
+                <button onClick={handleAddCard} style={{ width: "100%", padding: "14px", border: "none", cursor: "pointer", marginTop: "6px", background: `linear-gradient(135deg, ${c.gold}, ${c.goldDim})`, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))", opacity: !addName.trim() || !addValue ? 0.4 : 1 }}>
+                  <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "2px", color: c.darkest, fontFamily: "'Chakra Petch'" }}>ADD TO VAULT</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -732,6 +794,14 @@ function ProfileScreen({ vaultData, tradeData }) {
   const [settings, setSettings, settingsLoaded] = usePersistedState("collectibulls:settings", {
     notifications: true, priceAlerts: true, darkMode: true
   });
+  const [profile, setProfile, profileLoaded] = usePersistedState("collectibulls:profile", {
+    username: "VaultMaster_X", bio: "Pokemon, MTG, and sports card enthusiast. Building the ultimate vault.", since: "2025"
+  });
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editUsername, setEditUsername] = useState(profile.username);
+  const [editBio, setEditBio] = useState(profile.bio);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
   const notifications = settings.notifications;
   const priceAlerts = settings.priceAlerts;
   const darkMode = settings.darkMode;
@@ -741,6 +811,39 @@ function ProfileScreen({ vaultData, tradeData }) {
   const totalTrades = tradeData.length;
   const totalProfit = tradeData.filter(t=>t.type==="sell").reduce((s,t)=>s+(t.price-(t.costBasis||0)),0);
   const categoryCount = new Set(vaultData.map(cd=>cd.category)).size;
+
+  const handleSaveProfile = () => {
+    const safeName = editUsername.replace(/[<>"'&]/g, "").trim().slice(0, 30);
+    const safeBio = editBio.replace(/[<>"'&]/g, "").trim().slice(0, 200);
+    if (safeName) {
+      setProfile(prev => ({ ...prev, username: safeName, bio: safeBio }));
+    }
+    setShowEditProfile(false);
+  };
+
+  const handleResetData = () => {
+    if (typeof window !== "undefined") {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("collectibulls:")) keys.push(key);
+      }
+      keys.forEach(k => localStorage.removeItem(k));
+      window.location.reload();
+    }
+  };
+
+  const handleExportData = () => {
+    const data = { vault: vaultData, trades: tradeData, profile, settings, exportDate: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `collectibulls-export-${new Date().toISOString().split("T")[0]}.json`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const inputStyle = { width: "100%", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "13px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" };
+  const labelStyle = { display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" };
 
   return (
     <div>
@@ -760,12 +863,12 @@ function ProfileScreen({ vaultData, tradeData }) {
               <div style={{ position: "absolute", bottom: "2px", right: "2px", width: "10px", height: "10px", borderRadius: "50%", background: c.green, border: `2px solid ${c.dark}`, boxShadow: `0 0 6px ${c.green}80` }}/>
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: "18px", fontWeight: 700, fontFamily: "'Anybody'", color: c.text1 }}>VaultMaster_X</p>
-              <p style={{ margin: "3px 0 0", fontSize: "11px", color: c.text2, fontWeight: 400 }}>Collecting since 2025</p>
-              <p style={{ margin: "6px 0 0", fontSize: "10px", color: c.text3, lineHeight: 1.5, fontWeight: 400 }}>Pokemon, MTG, and sports card enthusiast. Building the ultimate vault.</p>
+              <p style={{ margin: 0, fontSize: "18px", fontWeight: 700, fontFamily: "'Anybody'", color: c.text1 }}>{profile.username}</p>
+              <p style={{ margin: "3px 0 0", fontSize: "11px", color: c.text2, fontWeight: 400 }}>Collecting since {profile.since}</p>
+              <p style={{ margin: "6px 0 0", fontSize: "10px", color: c.text3, lineHeight: 1.5, fontWeight: 400 }}>{profile.bio}</p>
             </div>
           </div>
-          <button style={{ marginTop: "18px", width: "100%", padding: "10px", border: `1px solid ${c.cyan}35`, background: `${c.cyan}06`, cursor: "pointer", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+          <button onClick={() => { setEditUsername(profile.username); setEditBio(profile.bio); setShowEditProfile(true); }} style={{ marginTop: "18px", width: "100%", padding: "10px", border: `1px solid ${c.cyan}35`, background: `${c.cyan}06`, cursor: "pointer", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M16.5 3.5L20.5 7.5L7 21H3V17L16.5 3.5Z" stroke={c.cyan} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "1.5px", color: c.cyan, fontFamily: "'Chakra Petch'" }}>EDIT PROFILE</span>
           </button>
@@ -776,7 +879,7 @@ function ProfileScreen({ vaultData, tradeData }) {
       <div className="slide-up d3" style={{ padding: "0 20px 20px" }}>
         <div className="panel" style={{ padding: "20px", background: `linear-gradient(180deg, ${c.surface}, ${c.dark})` }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}><div style={{ width: "3px", height: "16px", background: c.gold, borderRadius: "2px", boxShadow: `0 0 8px ${c.gold}40` }}/><p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>STATS</p></div>
-          {[[{l:"TOTAL CARDS",v:vaultData.length.toString(),a:c.text1},{l:"PORTFOLIO",v:`$${portfolioValue>=1000?(portfolioValue/1000).toFixed(1)+"K":portfolioValue.toLocaleString()}`,a:c.goldLight},{l:"CATEGORIES",v:categoryCount.toString(),a:c.cyan}],[{l:"TRADES",v:totalTrades.toString(),a:c.text1},{l:"PROFIT",v:`${totalProfit>=0?"+":""}$${Math.abs(totalProfit)>=1000?(Math.abs(totalProfit)/1000).toFixed(1)+"K":Math.abs(totalProfit).toLocaleString()}`,a:totalProfit>=0?c.green:c.red},{l:"MEMBER",v:"8 MO",a:c.text2}]].map((row,ri)=>(
+          {[[{l:"TOTAL CARDS",v:vaultData.length.toString(),a:c.text1},{l:"PORTFOLIO",v:`$${portfolioValue>=1000?(portfolioValue/1000).toFixed(1)+"K":portfolioValue.toLocaleString()}`,a:c.goldLight},{l:"CATEGORIES",v:categoryCount.toString(),a:c.cyan}],[{l:"TRADES",v:totalTrades.toString(),a:c.text1},{l:"PROFIT",v:`${totalProfit>=0?"+":""}$${Math.abs(totalProfit)>=1000?(Math.abs(totalProfit)/1000).toFixed(1)+"K":Math.abs(totalProfit).toLocaleString()}`,a:totalProfit>=0?c.green:c.red},{l:"MEMBER",v:`SINCE ${profile.since}`,a:c.text2}]].map((row,ri)=>(
             <div key={ri} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1px", background: `${c.border}30`, marginTop: ri?"1px":0 }}>
               {row.map((s,i)=>(<div key={i} style={{ padding: "16px 12px", background: c.surface, textAlign: "center" }}><p style={{ margin: 0, fontSize: "7px", letterSpacing: "2px", color: c.text3, fontWeight: 600 }}>{s.l}</p><p style={{ margin: "6px 0 0", fontSize: "22px", fontWeight: 700, color: s.a }}>{s.v}</p></div>))}
             </div>
@@ -825,28 +928,65 @@ function ProfileScreen({ vaultData, tradeData }) {
               <ToggleSwitch on={s.v} onToggle={s.t}/>
             </div>
           ))}
-          {[{l:"Account Security",d:"Password and 2FA",icon:<><rect x="3" y="11" width="18" height="10" rx="2" stroke={c.text2} strokeWidth="1.8" fill="none"/><path d="M7 11V7a5 5 0 0110 0v4" stroke={c.text2} strokeWidth="1.8" fill="none" strokeLinecap="round"/></>},
-            {l:"Display Currency",d:"USD ($)",icon:<><circle cx="12" cy="12" r="9" stroke={c.text2} strokeWidth="1.8" fill="none"/><path d="M12 7V17" stroke={c.text2} strokeWidth="1.5" fill="none" strokeLinecap="round"/></>},
-            {l:"Export Data",d:"CSV or PDF backup",icon:<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke={c.text2} strokeWidth="1.8" fill="none"/><path d="M14 2v6h6" stroke={c.text2} strokeWidth="1.8" fill="none"/></>},
-            {l:"Reset Data",d:"Clear all saved data",icon:<><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke={c.text2} strokeWidth="1.8" fill="none" strokeLinecap="round"/></>,action:"reset"},
-            {l:"Help & Support",d:"FAQ and contact",icon:<><circle cx="12" cy="12" r="9" stroke={c.text2} strokeWidth="1.8" fill="none"/><path d="M9 9a3 3 0 015.1 1.7C14.1 12 12 12 12 14" stroke={c.text2} strokeWidth="1.8" fill="none" strokeLinecap="round"/><circle cx="12" cy="17" r="0.5" fill={c.text2}/></>}
-          ].map((s,i)=>(
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 0", borderBottom: i<3?`1px solid ${c.border}25`:"none", cursor: "pointer" }}>
-              <div style={{ width: "34px", height: "34px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `${c.border}20`, borderRadius: "2px" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none">{s.icon}</svg></div>
-              <div style={{ flex: 1 }}><p style={{ margin: 0, fontSize: "12px", fontWeight: 600, color: c.text1 }}>{s.l}</p><p style={{ margin: "1px 0 0", fontSize: "10px", color: c.text3, fontWeight: 400 }}>{s.d}</p></div>
-              <SettingsChevron/>
-            </div>
-          ))}
+          {/* Export Data */}
+          <div onClick={handleExportData} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 0", borderBottom: `1px solid ${c.border}25`, cursor: "pointer" }}>
+            <div style={{ width: "34px", height: "34px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `${c.border}20`, borderRadius: "2px" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke={c.text2} strokeWidth="1.8" fill="none"/><path d="M14 2v6h6" stroke={c.text2} strokeWidth="1.8" fill="none"/></svg></div>
+            <div style={{ flex: 1 }}><p style={{ margin: 0, fontSize: "12px", fontWeight: 600, color: c.text1 }}>Export Data</p><p style={{ margin: "1px 0 0", fontSize: "10px", color: c.text3, fontWeight: 400 }}>Download JSON backup</p></div>
+            <SettingsChevron/>
+          </div>
+          {/* Reset Data */}
+          <div onClick={() => setShowResetConfirm(true)} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 0", borderBottom: `1px solid ${c.border}25`, cursor: "pointer" }}>
+            <div style={{ width: "34px", height: "34px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `${c.border}20`, borderRadius: "2px" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke={c.red} strokeWidth="1.8" fill="none" strokeLinecap="round"/></svg></div>
+            <div style={{ flex: 1 }}><p style={{ margin: 0, fontSize: "12px", fontWeight: 600, color: c.red }}>Reset All Data</p><p style={{ margin: "1px 0 0", fontSize: "10px", color: c.text3, fontWeight: 400 }}>Clear vault, trades, and settings</p></div>
+            <SettingsChevron/>
+          </div>
+          {/* Help */}
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 0", cursor: "pointer" }}>
+            <div style={{ width: "34px", height: "34px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `${c.border}20`, borderRadius: "2px" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke={c.text2} strokeWidth="1.8" fill="none"/><path d="M9 9a3 3 0 015.1 1.7C14.1 12 12 12 12 14" stroke={c.text2} strokeWidth="1.8" fill="none" strokeLinecap="round"/><circle cx="12" cy="17" r="0.5" fill={c.text2}/></svg></div>
+            <div style={{ flex: 1 }}><p style={{ margin: 0, fontSize: "12px", fontWeight: 600, color: c.text1 }}>Help & Support</p><p style={{ margin: "1px 0 0", fontSize: "10px", color: c.text3, fontWeight: 400 }}>FAQ and contact</p></div>
+            <SettingsChevron/>
+          </div>
         </div>
       </div>
 
-      <div className="slide-up d5" style={{ padding: "0 20px 20px" }}>
-        <button style={{ width: "100%", padding: "14px", border: `1px solid ${c.red}25`, background: `${c.red}06`, cursor: "pointer", clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke={c.red} strokeWidth="1.8" fill="none" strokeLinecap="round"/><path d="M16 17l5-5-5-5M21 12H9" stroke={c.red} strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "1.5px", color: c.red, fontFamily: "'Chakra Petch'" }}>SIGN OUT</span>
-        </button>
-      </div>
       <div style={{ textAlign: "center", padding: "0 20px 20px" }}><p style={{ margin: 0, fontSize: "9px", letterSpacing: "2px", color: c.text3 }}>COLLECTIBULLS v1.0.0</p></div>
+
+      {/* Edit Profile Modal */}
+      {showEditProfile && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center", animation: "fadeIn 0.2s ease" }} onClick={() => setShowEditProfile(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "480px", background: `linear-gradient(180deg, ${c.surfaceAlt}, ${c.dark})`, borderTop: `1px solid ${c.borderLight}40`, animation: "modalIn 0.3s ease forwards", clipPath: "polygon(0 12px, 12px 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%)", position: "relative" }}>
+            <div style={{ position: "absolute", top: 0, left: "12px", right: "12px", height: "1px", background: `linear-gradient(90deg, transparent, ${c.gold}50, transparent)` }}/>
+            <div style={{ padding: "24px 24px 32px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                <div><p style={{ margin: 0, fontSize: "9px", letterSpacing: "3px", color: c.text3 }}>ACCOUNT</p><p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 800, fontFamily: "'Anybody'", color: c.text1 }}>EDIT PROFILE</p></div>
+                <button onClick={() => setShowEditProfile(false)} style={{ background: `${c.darkest}80`, border: `1px solid ${c.border}`, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", borderRadius: "2px" }}><CloseIcon/></button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div><label style={labelStyle}>USERNAME</label><input value={editUsername} onChange={e => setEditUsername(e.target.value)} maxLength={30} style={inputStyle}/></div>
+                <div><label style={labelStyle}>BIO</label><textarea value={editBio} onChange={e => setEditBio(e.target.value)} maxLength={200} rows={3} style={{ ...inputStyle, resize: "none", minHeight: "72px" }}/></div>
+                <button onClick={handleSaveProfile} style={{ width: "100%", padding: "14px", border: "none", cursor: "pointer", marginTop: "6px", background: `linear-gradient(135deg, ${c.gold}, ${c.goldDim})`, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "2px", color: c.darkest, fontFamily: "'Chakra Petch'" }}>SAVE PROFILE</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Confirm Modal */}
+      {showResetConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.2s ease" }} onClick={() => setShowResetConfirm(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: "360px", width: "90%", background: `linear-gradient(180deg, ${c.surfaceAlt}, ${c.dark})`, border: `1px solid ${c.border}`, padding: "28px 24px", textAlign: "center", clipPath: "polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px))" }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ margin: "0 auto 16px", display: "block" }}><path d="M10.3 3.2L3.2 18.4C2.8 19.3 3.5 20 4.4 20H19.6C20.5 20 21.2 19.3 20.8 18.4L13.7 3.2C13.3 2.3 12.7 2 12 2C11.3 2 10.7 2.3 10.3 3.2Z" stroke={c.red} strokeWidth="1.8" fill="none"/><path d="M12 9V13" stroke={c.red} strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="17" r="1" fill={c.red}/></svg>
+            <p style={{ fontSize: "16px", fontWeight: 700, color: c.text1, marginBottom: "8px" }}>Reset all data?</p>
+            <p style={{ fontSize: "12px", color: c.text3, lineHeight: 1.6, marginBottom: "24px" }}>This will permanently delete your vault, trade log, saved comps, profile, and all settings. This cannot be undone.</p>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={() => setShowResetConfirm(false)} style={{ flex: 1, padding: "12px", border: `1px solid ${c.border}`, background: c.surface, cursor: "pointer", color: c.text2, fontSize: "11px", fontWeight: 600, letterSpacing: "1px", fontFamily: "'Chakra Petch'" }}>CANCEL</button>
+              <button onClick={handleResetData} style={{ flex: 1, padding: "12px", border: `1px solid ${c.red}40`, background: `${c.red}12`, cursor: "pointer", color: c.red, fontSize: "11px", fontWeight: 600, letterSpacing: "1px", fontFamily: "'Chakra Petch'" }}>RESET</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1365,7 +1505,7 @@ export default function App() {
 
           {/* Screen Content */}
           <div style={{ padding: isDesktop ? "24px 32px" : "0" }}>
-            {activeTab === "home" && <HomeScreen vaultData={sharedVault} tradeData={sharedTrades} />}
+            {activeTab === "home" && <HomeScreen vaultData={sharedVault} tradeData={sharedTrades} onNavigate={setActiveTab} />}
             {activeTab === "collection" && <VaultScreen sharedCards={sharedVault} setSharedCards={setSharedVault} />}
             {activeTab === "trade" && <TradeScreen sharedTrades={sharedTrades} setSharedTrades={setSharedTrades} />}
             {activeTab === "comps" && <CompsScreen />}
