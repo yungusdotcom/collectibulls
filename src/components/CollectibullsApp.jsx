@@ -440,7 +440,7 @@ function VaultScreen({ sharedCards, setSharedCards }) {
 
       {/* Grid */}
       {viewMode==="grid" && (
-        <div style={{ padding: "14px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div style={{ padding: "14px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px" }}>
           {filtered.map((card,i)=>{
             const cc=catColors[card.category]||c.text3; const isUp=card.change>=0;
             return (
@@ -467,18 +467,22 @@ function VaultScreen({ sharedCards, setSharedCards }) {
           {filtered.map((card,i)=>{
             const cc=catColors[card.category]||c.text3; const isUp=card.change>=0;
             return (
-              <div key={card.id} className="list-row" onClick={()=>setSelectedCard(card)} style={{ display: "flex", alignItems: "center", gap: "12px", borderBottom: i<filtered.length-1?`1px solid ${c.border}25`:"none", animation: `slideUp 0.3s ease-out ${i*0.03}s forwards`, opacity: 0, cursor: "pointer", borderRadius: "2px", padding: "12px 10px", margin: "0 -10px" }}>
+              <div key={card.id} className="list-row" onClick={()=>setSelectedCard(card)} style={{ display: "flex", alignItems: "center", gap: "14px", borderBottom: i<filtered.length-1?`1px solid ${c.border}25`:"none", animation: `slideUp 0.3s ease-out ${i*0.03}s forwards`, opacity: 0, cursor: "pointer", borderRadius: "2px", padding: "12px 10px", margin: "0 -10px" }}>
                 <div style={{ width: "44px", height: "60px", flexShrink: 0 }}><CardPlaceholder category={card.category}/></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: "12px", fontWeight: 600, color: c.text1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.name}</p>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
-                    <span style={{ fontSize: "7px", fontWeight: 700, letterSpacing: "1px", padding: "1px 5px", color: cc, background: `${cc}10`, border: `1px solid ${cc}18` }}>{card.category.toUpperCase()}</span>
-                    <span style={{ fontSize: "9px", color: c.text3, fontWeight: 500 }}>{card.grade}</span>
+                  <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: c.text1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.name}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "1px", padding: "2px 6px", color: cc, background: `${cc}10`, border: `1px solid ${cc}18` }}>{card.category.toUpperCase()}</span>
+                    <span style={{ fontSize: "10px", color: c.text3, fontWeight: 500 }}>{card.grade}</span>
+                    <span style={{ fontSize: "10px", color: c.text3 }}>{card.set} ({card.year})</span>
                   </div>
                 </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: c.goldLight }}>${card.value.toLocaleString()}</p>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "2px", marginTop: "2px" }}><TrendArrow up={isUp} size={10}/><span style={{ fontSize: "10px", fontWeight: 600, color: isUp?c.green:c.red }}>{Math.abs(card.change)}%</span></div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                  <TrendArrow up={isUp} size={10}/>
+                  <span style={{ fontSize: "11px", fontWeight: 600, color: isUp?c.green:c.red, minWidth: "40px" }}>{isUp?"+":""}{card.change}%</span>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0, minWidth: "80px" }}>
+                  <p style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: c.goldLight }}>${card.value.toLocaleString()}</p>
                 </div>
               </div>
             );
