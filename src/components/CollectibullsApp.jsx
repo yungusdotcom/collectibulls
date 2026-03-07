@@ -852,7 +852,6 @@ function ProfileScreen({ vaultData, tradeData }) {
 
   const notifications = settings.notifications;
   const priceAlerts = settings.priceAlerts;
-  const darkMode = settings.darkMode;
   const toggleSetting = (key) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   const unlockedCount = achievementData.filter(a=>a.unlocked).length;
   const portfolioValue = vaultData.reduce((s, cd) => s + cd.value, 0);
@@ -972,8 +971,7 @@ function ProfileScreen({ vaultData, tradeData }) {
         <div className="panel" style={{ padding: "20px", background: `linear-gradient(180deg, ${c.surface}, ${c.dark})` }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}><div style={{ width: "3px", height: "16px", background: c.cyan, borderRadius: "2px", boxShadow: `0 0 8px ${c.cyan}40` }}/><p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>SETTINGS</p></div>
           {[{l:"Push Notifications",d:"Trade alerts and updates",v:notifications,t:()=>toggleSetting("notifications"),icon:<path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke={c.text2} strokeWidth="1.8" fill="none" strokeLinecap="round"/>},
-            {l:"Price Alerts",d:"Notify when cards hit targets",v:priceAlerts,t:()=>toggleSetting("priceAlerts"),icon:<path d="M12 2L14.4 8.2L21 9L16 13.5L17.5 20L12 16.8L6.5 20L8 13.5L3 9L9.6 8.2L12 2Z" stroke={c.text2} strokeWidth="1.8" fill="none" strokeLinejoin="round"/>},
-            {l:"Dark Mode",d:"Always on",v:darkMode,t:()=>toggleSetting("darkMode"),icon:<path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke={c.text2} strokeWidth="1.8" fill="none"/>}
+            {l:"Price Alerts",d:"Notify when cards hit targets",v:priceAlerts,t:()=>toggleSetting("priceAlerts"),icon:<path d="M12 2L14.4 8.2L21 9L16 13.5L17.5 20L12 16.8L6.5 20L8 13.5L3 9L9.6 8.2L12 2Z" stroke={c.text2} strokeWidth="1.8" fill="none" strokeLinejoin="round"/>}
           ].map((s,i)=>(
             <div key={i} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 0", borderBottom: `1px solid ${c.border}25`, cursor: "pointer" }}>
               <div style={{ width: "34px", height: "34px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `${c.border}20`, borderRadius: "2px" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none">{s.icon}</svg></div>
