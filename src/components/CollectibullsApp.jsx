@@ -245,9 +245,9 @@ function HomeScreen({ vaultData, tradeData, onNavigate }) {
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: "14px" }}>
             <div><span style={{ fontSize: "14px", fontWeight: 500, color: c.goldDim, verticalAlign: "top", position: "relative", top: "6px" }}>$</span><span style={{ fontSize: "42px", fontWeight: 700, letterSpacing: "-1px", color: c.goldLight, textShadow: `0 0 40px ${c.gold}15` }}>{portfolioValue.toLocaleString()}</span></div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px 3px 6px", background: `${c.green}08`, border: `1px solid ${c.green}20`, clipPath: "polygon(0 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 0 100%)" }}>
-              <TrendArrow up={true}/><span style={{ fontSize: "13px", fontWeight: 700, color: c.green }}>9.3%</span>
-            </div>
+            {portfolioValue > 0 && <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px 3px 6px", background: `${c.cyan}08`, border: `1px solid ${c.cyan}20`, clipPath: "polygon(0 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 0 100%)" }}>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: c.cyan }}>LIVE</span>
+            </div>}
           </div>
           <p style={{ margin: "4px 0 0", fontSize: "12px", color: c.text3, fontWeight: 500 }}>{totalCards} cards in vault</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr 1px 1fr", gap: 0, marginTop: "24px", paddingTop: "20px", borderTop: `1px solid ${c.border}60` }}>
@@ -271,6 +271,7 @@ function HomeScreen({ vaultData, tradeData, onNavigate }) {
             </div>
           </div>
           <div style={{ height: "150px" }}>
+            {trendData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs><linearGradient id="cf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={c.cyan} stopOpacity={0.15}/><stop offset="100%" stopColor={c.cyan} stopOpacity={0}/></linearGradient></defs>
@@ -280,6 +281,11 @@ function HomeScreen({ vaultData, tradeData, onNavigate }) {
                 <Area type="monotone" dataKey="value" stroke={c.cyan} strokeWidth={2} fill="url(#cf)" dot={false} activeDot={{ r: 4, fill: c.cyan, stroke: c.dark, strokeWidth: 2 }}/>
               </AreaChart>
             </ResponsiveContainer>
+            ) : (
+              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <p style={{ fontSize: "11px", color: c.text3, fontWeight: 500 }}>Add cards to your vault to see trends</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -290,6 +296,7 @@ function HomeScreen({ vaultData, tradeData, onNavigate }) {
           <div style={{ width: "3px", height: "16px", background: c.green, borderRadius: "2px", boxShadow: `0 0 8px ${c.green}40` }}/><p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>TOP MOVERS</p>
         </div>
         <div className="hide-sb" style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "4px" }}>
+          {movers.length === 0 && <p style={{ fontSize: "11px", color: c.text3, fontWeight: 500, padding: "16px 0" }}>Add cards to see top movers</p>}
           {movers.map((card,i)=>{
             const isUp=card.direction==="up"; const ac=isUp?c.green:c.red; const cc=catColors[card.category]||c.text3;
             return (
@@ -316,6 +323,7 @@ function HomeScreen({ vaultData, tradeData, onNavigate }) {
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}><div style={{ width: "3px", height: "16px", background: c.magenta, borderRadius: "2px", boxShadow: `0 0 8px ${c.magenta}40` }}/><p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>TRANSACTIONS</p></div>
             <span onClick={() => onNavigate && onNavigate("trade")} style={{ fontSize: "10px", color: c.cyan, cursor: "pointer", fontWeight: 600, letterSpacing: "1px", borderBottom: `1px solid ${c.cyan}30`, paddingBottom: "1px" }}>VIEW ALL</span>
           </div>
+          {recentTx.length === 0 && <p style={{ fontSize: "11px", color: c.text3, fontWeight: 500, padding: "12px 0", textAlign: "center" }}>No transactions yet. Log your first trade.</p>}
           {recentTx.map((tx,i)=>{
             const isBuy=tx.type==="buy"; const cc=catColors[tx.category]||c.text3;
             const txDate = typeof tx.date === "string" && tx.date.includes("-") ? formatDate(tx.date) : tx.date;
@@ -795,7 +803,7 @@ function ProfileScreen({ vaultData, tradeData }) {
     notifications: true, priceAlerts: true, darkMode: true
   });
   const [profile, setProfile, profileLoaded] = usePersistedState("collectibulls:profile", {
-    username: "VaultMaster_X", bio: "Pokemon, MTG, and sports card enthusiast. Building the ultimate vault.", since: "2025", pfp: null
+    username: "Collector", bio: "", since: new Date().getFullYear().toString(), pfp: null
   });
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editUsername, setEditUsername] = useState(profile.username);
