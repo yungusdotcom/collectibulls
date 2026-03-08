@@ -1155,7 +1155,6 @@ function CompsScreen() {
       const res = await fetch(`/api/ebay?q=${encodeURIComponent(searchQuery)}&limit=20&sort=price`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || data.error || "Search failed");
-      const data = await res.json();
 
       const allPrices = data.items.map(i => i.price?.value).filter(p => p > 0);
       const gradedItems = data.items.filter(i => /psa|bgs|cgc|gem|mint/i.test(i.title));
