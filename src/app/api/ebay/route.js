@@ -174,7 +174,7 @@ export async function GET(request) {
   } catch (error) {
     console.error("eBay search error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: error.message || "Unknown error" },
       { status: 500 }
     );
   }
