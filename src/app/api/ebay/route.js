@@ -66,33 +66,38 @@ export async function GET(request) {
       Math.max(parseInt(searchParams.get("limit") || "10", 10), 1),
       50
     );
-    const sort = searchParams.get("sort") || "price"; // price, newlyListed, endingSoonest
+    const sort = searchParams.get("sort") || "price";
     const category = searchParams.get("category") || "";
 
     // Build eBay API URL
     const params = new URLSearchParams({
       q: query,
       limit: limit.toString(),
-      sort: sort,
     });
 
-    // Add category filter for trading cards
-    // eBay category IDs:
-    // 183454 - Trading Cards (general)
+    // Only add sort if not "relevance" (eBay defaults to relevance when omitted)
+    if (sort && sort !== "relevance") {
+      params.set("sort", sort);
+    }
+
+    // Trading card category IDs
+    // 212 - Sporting Goods > Sports Memorabilia, Cards & Fan Shop
     // 2536 - Sports Trading Cards
-    // 183454 - CCG Individual Cards (Pokemon, MTG, Yu-Gi-Oh)
-    if (category) {
-      const categoryMap = {
-        sports: "2536",
-        pokemon: "183454",
-        mtg: "183454",
-        yugioh: "183454",
-        all: "",
-      };
-      const catId = categoryMap[category.toLowerCase()] || "";
-      if (catId) {
-        params.set("category_ids", catId);
-      }
+    // 183454 - Collectible Card Games (CCG)
+    // 183050 - Non-Sport Trading Cards
+    const categoryMap = {
+      sports: "2536",
+      pokemon: "183454",
+      mtg: "183454",
+      yugioh: "183454",
+      all_cards: "2536,183454,183050",
+      all: "",
+    };
+
+    const catKey = (category || "").toLowerCase();
+    const catId = categoryMap[catKey] || "";
+    if (catId) {
+      params.set("category_ids", catId);
     }
 
     // Filter for Buy It Now items

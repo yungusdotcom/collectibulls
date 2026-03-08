@@ -1125,7 +1125,7 @@ function CompsScreen() {
     setSugLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/ebay?q=${encodeURIComponent(val.trim() + " trading card")}&limit=8&sort=price`);
+        const res = await fetch(`/api/ebay?q=${encodeURIComponent(val.trim())}&limit=8&sort=relevance&category=all_cards`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setSuggestions(data.items || []);
@@ -1151,8 +1151,8 @@ function CompsScreen() {
     setResults(null);
     setShowSuggestions(false);
     try {
-      const searchQuery = `${q.trim()} trading card ${condition !== "ungraded" ? condition : ""}`.trim();
-      const res = await fetch(`/api/ebay?q=${encodeURIComponent(searchQuery)}&limit=20&sort=price`);
+      const searchQuery = `${q.trim()} ${condition !== "ungraded" ? condition : ""}`.trim();
+      const res = await fetch(`/api/ebay?q=${encodeURIComponent(searchQuery)}&limit=20&sort=price&category=all_cards`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || data.error || "Search failed");
 
