@@ -1134,13 +1134,32 @@ function CompsScreen() {
     }, 400);
   };
 
-  // Select a suggestion — populate the search and run full comp
+  // Selected card image for display
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedTitle, setSelectedTitle] = useState("");
+
+  // Simplify a listing title for searching — strip noise like card numbers, years, extra details
+  const simplifyTitle = (title) => {
+    return title
+      .replace(/\b(#\S+|\/\d+|\d{4}(-\d{2,4})?)\b/g, " ") // remove card numbers, years
+      .replace(/\b(trading card|card|free shipping|ships free|lot|set|pick|choose|you pick|u pick|complete your|base|insert)\b/gi, " ")
+      .replace(/\b(new|used|mint|near mint|nm|lp|mp|hp)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ")
+      .slice(0, 8) // keep first 8 meaningful words
+      .join(" ");
+  };
+
+  // Select a suggestion — store its image, simplify title for comp search
   const selectSuggestion = (item) => {
+    const simplified = simplifyTitle(item.title);
     setQuery(item.title);
+    setSelectedImage(item.imageUrl);
+    setSelectedTitle(item.title);
     setShowSuggestions(false);
     setSuggestions([]);
-    // Run full search with this item's title
-    runFullSearch(item.title);
+    runFullSearch(simplified);
   };
 
   const runFullSearch = async (searchText) => {
@@ -1150,6 +1169,7 @@ function CompsScreen() {
     setError(null);
     setResults(null);
     setShowSuggestions(false);
+    if (!searchText) { setSelectedImage(null); setSelectedTitle(""); }
     try {
       const searchQuery = `${q.trim()} ${condition !== "ungraded" ? condition : ""}`.trim();
       const res = await fetch(`/api/ebay?q=${encodeURIComponent(searchQuery)}&limit=20&sort=price&category=all_cards`);
@@ -1338,6 +1358,22 @@ function CompsScreen() {
       {/* Results */}
       {results && !loading && (
         <div style={{ padding: "16px 20px" }}>
+
+          {/* Hero Card Display */}
+          {(selectedImage || results.items?.[0]?.imageUrl) && (
+            <div className="slide-up d1" style={{ marginBottom: "16px" }}>
+              <div className="panel" style={{ padding: "20px", background: `linear-gradient(165deg, ${c.surfaceAlt}, ${c.dark})`, display: "flex", gap: "20px", alignItems: "center" }}>
+                <div style={{ width: "100px", height: "140px", flexShrink: 0, borderRadius: "4px", overflow: "hidden", border: `1px solid ${c.border}40`, boxShadow: `0 4px 20px rgba(0,0,0,0.4)` }}>
+                  <img src={selectedImage || results.items[0]?.imageUrl} alt={selectedTitle || query} style={{ width: "100%", height: "100%", objectFit: "contain", background: c.darkest }}/>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: "8px", letterSpacing: "2px", color: c.gold, fontWeight: 600 }}>COMP RESULTS FOR</p>
+                  <p style={{ margin: "6px 0 0", fontSize: "16px", fontWeight: 700, fontFamily: "'Anybody'", color: c.text1, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{selectedTitle || query}</p>
+                  <p style={{ margin: "6px 0 0", fontSize: "11px", color: c.text3 }}>{results.total.toLocaleString()} listings found on eBay</p>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Verdict Card (Deal Check Mode) */}
           {verdict && (
             <div className="slide-up d1" style={{ marginBottom: "16px" }}>
@@ -1420,15 +1456,26 @@ function CompsScreen() {
                 <span style={{ fontSize: "8px", fontWeight: 600, letterSpacing: "1px", color: c.gold }}>SAVE COMP</span>
               </button>
             </div>
-            <div className="hide-sb" style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "4px" }}>
+            <div className="hide-sb" style={{ display: "flex", gap: "12px", overflowX: "auto", paddingBottom: "8px" }}>
               {results.items.map((item, i) => (
-                <a key={i} href={item.itemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit", minWidth: "160px", flexShrink: 0 }}>
-                  <div className="mover-card" style={{ background: c.surface, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))" }}>
-                    {item.imageUrl && <div style={{ width: "100%", height: "100px", background: `url(${item.imageUrl}) center/cover`, borderBottom: `1px solid ${c.border}30` }}/>}
-                    <div style={{ padding: "10px 12px" }}>
-                      <p style={{ margin: 0, fontSize: "10px", fontWeight: 600, color: c.text1, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", minHeight: "26px" }}>{item.title}</p>
-                      <p style={{ margin: "6px 0 0", fontSize: "16px", fontWeight: 700, color: c.goldLight }}>${item.price?.value?.toLocaleString() || "—"}</p>
-                      {item.shippingCost != null && <p style={{ margin: "2px 0 0", fontSize: "8px", color: c.text3 }}>+${item.shippingCost} shipping</p>}
+                <a key={i} href={item.itemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit", minWidth: "180px", maxWidth: "180px", flexShrink: 0 }}>
+                  <div className="mover-card" style={{ background: c.surface, borderRadius: "4px", overflow: "hidden", border: `1px solid ${c.border}30` }}>
+                    {item.imageUrl ? (
+                      <div style={{ width: "100%", height: "160px", background: c.darkest, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${c.border}30` }}>
+                        <img src={item.imageUrl} alt={item.title} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}/>
+                      </div>
+                    ) : (
+                      <div style={{ width: "100%", height: "160px", background: c.darkest, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${c.border}30` }}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.2 }}><rect x="3" y="2" width="18" height="20" rx="2" stroke={c.text3} strokeWidth="1.5"/></svg>
+                      </div>
+                    )}
+                    <div style={{ padding: "12px" }}>
+                      <p style={{ margin: 0, fontSize: "10px", fontWeight: 600, color: c.text1, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", minHeight: "28px" }}>{item.title}</p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "8px" }}>
+                        <p style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: c.goldLight }}>${item.price?.value?.toLocaleString() || "—"}</p>
+                        {item.shippingCost != null && item.shippingCost > 0 && <p style={{ margin: 0, fontSize: "8px", color: c.text3 }}>+${item.shippingCost} ship</p>}
+                      </div>
+                      <p style={{ margin: "4px 0 0", fontSize: "8px", color: c.text3, letterSpacing: "0.5px" }}>{item.condition || ""}</p>
                     </div>
                   </div>
                 </a>
