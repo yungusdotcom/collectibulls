@@ -18,7 +18,7 @@ const nextConfig = {
             "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com",
-            "img-src 'self' data: blob:",
+            "img-src 'self' data: blob: https://i.ebayimg.com https://ir.ebaystatic.com",
             "connect-src 'self' https://api.ebay.com",
             "frame-ancestors 'none'",
           ].join("; "),

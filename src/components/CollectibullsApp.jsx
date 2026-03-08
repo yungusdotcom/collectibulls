@@ -1238,7 +1238,7 @@ function CompsScreen() {
 
             {/* Autocomplete dropdown */}
             {showSuggestions && suggestions.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: "4px", background: c.dark, border: `1px solid ${c.gold}25`, zIndex: 60, maxHeight: "320px", overflowY: "auto", boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px ${c.border}` }}>
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: "4px", background: c.dark, border: `1px solid ${c.gold}25`, zIndex: 300, maxHeight: "320px", overflowY: "auto", boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px ${c.border}` }}>
                 <div style={{ padding: "8px 12px 4px" }}>
                   <p style={{ margin: 0, fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600 }}>LIVE RESULTS</p>
                 </div>
