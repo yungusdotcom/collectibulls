@@ -95,10 +95,10 @@ export async function GET(request) {
       }
     }
 
-    // Filter for Buy It Now items with prices
+    // Filter for Buy It Now items
     params.set(
       "filter",
-      "buyingOptions:{FIXED_PRICE},conditions:{NEW|LIKE_NEW|VERY_GOOD|GOOD}"
+      "buyingOptions:{FIXED_PRICE}"
     );
 
     const token = await getEbayToken();
@@ -107,8 +107,6 @@ export async function GET(request) {
       headers: {
         Authorization: `Bearer ${token}`,
         "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
-        "X-EBAY-C-ENDUSERCTX":
-          "affiliateCampaignId=<ePNCampaignId>,affiliateReferenceId=<referenceId>",
         "Content-Type": "application/json",
       },
     });
@@ -117,7 +115,7 @@ export async function GET(request) {
       const errorText = await response.text();
       console.error("eBay API error:", response.status, errorText);
       return NextResponse.json(
-        { error: "Failed to fetch from eBay", status: response.status },
+        { error: "Failed to fetch from eBay", status: response.status, detail: errorText.slice(0, 500) },
         { status: 502 }
       );
     }

@@ -1153,7 +1153,8 @@ function CompsScreen() {
     try {
       const searchQuery = `${q.trim()} trading card ${condition !== "ungraded" ? condition : ""}`.trim();
       const res = await fetch(`/api/ebay?q=${encodeURIComponent(searchQuery)}&limit=20&sort=price`);
-      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.error || "Search failed");
       const data = await res.json();
 
       const allPrices = data.items.map(i => i.price?.value).filter(p => p > 0);
@@ -1183,7 +1184,7 @@ function CompsScreen() {
         ungradedStats: calcStats(ungradedPrices),
       });
     } catch (e) {
-      setError("Failed to fetch comps. Try again.");
+      setError(e.message || "Failed to fetch comps. Try again.");
     } finally {
       setLoading(false);
     }
