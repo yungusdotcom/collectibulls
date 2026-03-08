@@ -1225,11 +1225,11 @@ function CompsScreen() {
       </div>
 
       {/* Search + Deal Check */}
-      <div className="slide-up d2" style={{ padding: "16px 20px 0" }}>
+      <div className="slide-up d2" style={{ padding: "16px 20px 0", position: "relative", zIndex: 200 }}>
         {/* Search bar with autocomplete */}
         <div style={{ display: "flex", gap: "8px" }}>
-          <div style={{ flex: 1, position: "relative" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", background: c.surface, border: `1px solid ${showSuggestions && suggestions.length > 0 ? c.gold + "40" : c.border}`, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))", transition: "border 0.2s ease" }}>
+          <div style={{ flex: 1, position: "relative", zIndex: 201 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", background: c.surface, border: `1px solid ${showSuggestions && suggestions.length > 0 ? c.gold + "40" : c.border}`, borderRadius: "2px", transition: "border 0.2s ease" }}>
               <SearchIconSvg/>
               <input ref={searchInputRef} value={query} onChange={e => handleQueryChange(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { setShowSuggestions(false); handleSearch(); } if (e.key === "Escape") setShowSuggestions(false); }} onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }} placeholder="Search any card..." style={{ flex: 1, background: "none", border: "none", outline: "none", color: c.text1, fontSize: "13px", fontFamily: "'Chakra Petch'", fontWeight: 500 }}/>
               {sugLoading && <div style={{ width: "14px", height: "14px", border: `2px solid ${c.border}`, borderTop: `2px solid ${c.gold}`, borderRadius: "50%", animation: "spin 0.6s linear infinite", flexShrink: 0 }}/>}
@@ -1238,7 +1238,7 @@ function CompsScreen() {
 
             {/* Autocomplete dropdown */}
             {showSuggestions && suggestions.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: "4px", background: c.dark, border: `1px solid ${c.gold}25`, zIndex: 300, maxHeight: "320px", overflowY: "auto", boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px ${c.border}` }}>
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: "4px", background: c.dark, border: `1px solid ${c.gold}25`, zIndex: 9999, maxHeight: "320px", overflowY: "auto", boxShadow: `0 12px 40px rgba(0,0,0,0.8), 0 0 0 1px ${c.border}`, borderRadius: "4px" }}>
                 <div style={{ padding: "8px 12px 4px" }}>
                   <p style={{ margin: 0, fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600 }}>LIVE RESULTS</p>
                 </div>
