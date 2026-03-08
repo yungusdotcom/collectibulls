@@ -81,9 +81,11 @@ export async function GET(request) {
     };
     const catId = categoryMap[catKey] || "";
 
+    const noAppend = searchParams.get("noAppend") === "1";
+
     // Build eBay API URL
-    // Append "card" to query when no specific category to keep results relevant
-    const searchQuery = !catId ? `${query} card` : query;
+    // Append "card" to query when no specific category and not from typeahead selection
+    const searchQuery = (!catId && !noAppend) ? `${query} card` : query;
     const params = new URLSearchParams({
       q: searchQuery,
       limit: limit.toString(),

@@ -1138,31 +1138,34 @@ function CompsScreen() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedTitle, setSelectedTitle] = useState("");
 
-  // Simplify a listing title for searching — strip noise like card numbers, years, extra details
+  // Simplify a listing title for searching — strip noise but keep key identifiers
   const simplifyTitle = (title) => {
     return title
-      .replace(/\b(#\S+|\/\d+|\d{4}(-\d{2,4})?)\b/g, " ") // remove card numbers, years
-      .replace(/\b(trading card|card|free shipping|ships free|lot|set|pick|choose|you pick|u pick|complete your|base|insert)\b/gi, " ")
-      .replace(/\b(new|used|mint|near mint|nm|lp|mp|hp)\b/gi, " ")
+      .replace(/[#️🔥⭐💎✨🏆]/g, "") // remove emojis
+      .replace(/#\w+/g, " ") // remove hashtag-style card numbers
+      .replace(/\b(free shipping|ships free|fast shipping|look|wow|hot|rare find|must see|invest)\b/gi, " ")
+      .replace(/\b(lot of|complete your set|you pick|u pick|pick your)\b/gi, " ")
+      .replace(/[!()[\]{}]/g, " ")
       .replace(/\s+/g, " ")
       .trim()
       .split(" ")
-      .slice(0, 8) // keep first 8 meaningful words
+      .slice(0, 10) // keep first 10 meaningful words
       .join(" ");
   };
 
-  // Select a suggestion — store its image, simplify title for comp search
+  // Select a suggestion — store its image, search for comps with simplified query
   const selectSuggestion = (item) => {
-    const simplified = simplifyTitle(item.title);
     setQuery(item.title);
     setSelectedImage(item.imageUrl);
     setSelectedTitle(item.title);
     setShowSuggestions(false);
     setSuggestions([]);
-    runFullSearch(simplified);
+    // Simplify the title for comp search — keep key identifying words
+    const simplified = simplifyTitle(item.title);
+    runFullSearch(simplified, true);
   };
 
-  const runFullSearch = async (searchText) => {
+  const runFullSearch = async (searchText, noAppend) => {
     const q = searchText || query;
     if (!q.trim()) return;
     setLoading(true);
@@ -1172,7 +1175,9 @@ function CompsScreen() {
     if (!searchText) { setSelectedImage(null); setSelectedTitle(""); }
     try {
       const searchQuery = `${q.trim()} ${condition !== "ungraded" ? condition : ""}`.trim();
-      const res = await fetch(`/api/ebay?q=${encodeURIComponent(searchQuery)}&limit=20&sort=price&category=all_cards`);
+      const appendParam = noAppend ? "&noAppend=1" : "";
+      // Use relevance sort for better matching, not price
+      const res = await fetch(`/api/ebay?q=${encodeURIComponent(searchQuery)}&limit=30&sort=relevance&category=all_cards${appendParam}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || data.error || "Search failed");
 
