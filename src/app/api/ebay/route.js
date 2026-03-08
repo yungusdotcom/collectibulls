@@ -68,10 +68,24 @@ export async function GET(request) {
     );
     const sort = searchParams.get("sort") || "price";
     const category = searchParams.get("category") || "";
+    const catKey = (category || "").toLowerCase();
+
+    // Trading card category IDs
+    const categoryMap = {
+      sports: "2536",
+      pokemon: "183454",
+      mtg: "183454",
+      yugioh: "183454",
+      all_cards: "",
+      all: "",
+    };
+    const catId = categoryMap[catKey] || "";
 
     // Build eBay API URL
+    // Append "card" to query when no specific category to keep results relevant
+    const searchQuery = !catId ? `${query} card` : query;
     const params = new URLSearchParams({
-      q: query,
+      q: searchQuery,
       limit: limit.toString(),
     });
 
@@ -80,22 +94,6 @@ export async function GET(request) {
       params.set("sort", sort);
     }
 
-    // Trading card category IDs
-    // 212 - Sporting Goods > Sports Memorabilia, Cards & Fan Shop
-    // 2536 - Sports Trading Cards
-    // 183454 - Collectible Card Games (CCG)
-    // 183050 - Non-Sport Trading Cards
-    const categoryMap = {
-      sports: "2536",
-      pokemon: "183454",
-      mtg: "183454",
-      yugioh: "183454",
-      all_cards: "2536,183454,183050",
-      all: "",
-    };
-
-    const catKey = (category || "").toLowerCase();
-    const catId = categoryMap[catKey] || "";
     if (catId) {
       params.set("category_ids", catId);
     }
