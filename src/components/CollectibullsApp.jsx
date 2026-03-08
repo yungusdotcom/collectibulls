@@ -1109,18 +1109,53 @@ function CompsScreen() {
   const [error, setError] = useState(null);
   const [savedComps, setSavedComps, savedLoaded] = usePersistedState("collectibulls:saved-comps", []);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  // Live search / autocomplete state
+  const [suggestions, setSuggestions] = useState([]);
+  const [sugLoading, setSugLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef(null);
+  const searchInputRef = useRef(null);
+
+  // Debounced typeahead — fires after 400ms of no typing
+  const handleQueryChange = (val) => {
+    setQuery(val);
+    setShowSuggestions(true);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (val.trim().length < 3) { setSuggestions([]); setSugLoading(false); return; }
+    setSugLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/ebay?q=${encodeURIComponent(val.trim() + " trading card")}&limit=8&sort=price`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setSuggestions(data.items || []);
+      } catch { setSuggestions([]); }
+      finally { setSugLoading(false); }
+    }, 400);
+  };
+
+  // Select a suggestion — populate the search and run full comp
+  const selectSuggestion = (item) => {
+    setQuery(item.title);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    // Run full search with this item's title
+    runFullSearch(item.title);
+  };
+
+  const runFullSearch = async (searchText) => {
+    const q = searchText || query;
+    if (!q.trim()) return;
     setLoading(true);
     setError(null);
     setResults(null);
+    setShowSuggestions(false);
     try {
-      const searchQuery = `${query.trim()} trading card ${condition !== "ungraded" ? condition : ""}`.trim();
+      const searchQuery = `${q.trim()} trading card ${condition !== "ungraded" ? condition : ""}`.trim();
       const res = await fetch(`/api/ebay?q=${encodeURIComponent(searchQuery)}&limit=20&sort=price`);
       if (!res.ok) throw new Error("Search failed");
       const data = await res.json();
 
-      // Simulate graded vs ungraded breakdown from results
       const allPrices = data.items.map(i => i.price?.value).filter(p => p > 0);
       const gradedItems = data.items.filter(i => /psa|bgs|cgc|gem|mint/i.test(i.title));
       const ungradedItems = data.items.filter(i => !/psa|bgs|cgc|gem|mint/i.test(i.title));
@@ -1153,6 +1188,8 @@ function CompsScreen() {
       setLoading(false);
     }
   };
+
+  const handleSearch = () => runFullSearch();
 
   const verdict = dealCheckMode && results && askingPrice
     ? getVerdict(parseFloat(askingPrice), condition === "ungraded" ? results.ungradedStats.avg || results.allStats.avg : results.gradedStats.avg || results.allStats.avg)
@@ -1189,12 +1226,52 @@ function CompsScreen() {
 
       {/* Search + Deal Check */}
       <div className="slide-up d2" style={{ padding: "16px 20px 0" }}>
-        {/* Search bar */}
+        {/* Search bar with autocomplete */}
         <div style={{ display: "flex", gap: "8px" }}>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))" }}>
-            <SearchIconSvg/>
-            <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSearch()} placeholder="Search any card..." style={{ flex: 1, background: "none", border: "none", outline: "none", color: c.text1, fontSize: "13px", fontFamily: "'Chakra Petch'", fontWeight: 500 }}/>
-            {query && <button onClick={() => { setQuery(""); setResults(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}><CloseIcon/></button>}
+          <div style={{ flex: 1, position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", background: c.surface, border: `1px solid ${showSuggestions && suggestions.length > 0 ? c.gold + "40" : c.border}`, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))", transition: "border 0.2s ease" }}>
+              <SearchIconSvg/>
+              <input ref={searchInputRef} value={query} onChange={e => handleQueryChange(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { setShowSuggestions(false); handleSearch(); } if (e.key === "Escape") setShowSuggestions(false); }} onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }} placeholder="Search any card..." style={{ flex: 1, background: "none", border: "none", outline: "none", color: c.text1, fontSize: "13px", fontFamily: "'Chakra Petch'", fontWeight: 500 }}/>
+              {sugLoading && <div style={{ width: "14px", height: "14px", border: `2px solid ${c.border}`, borderTop: `2px solid ${c.gold}`, borderRadius: "50%", animation: "spin 0.6s linear infinite", flexShrink: 0 }}/>}
+              {query && !sugLoading && <button onClick={() => { setQuery(""); setResults(null); setSuggestions([]); setShowSuggestions(false); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}><CloseIcon/></button>}
+            </div>
+
+            {/* Autocomplete dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: "4px", background: c.dark, border: `1px solid ${c.gold}25`, zIndex: 60, maxHeight: "320px", overflowY: "auto", boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px ${c.border}` }}>
+                <div style={{ padding: "8px 12px 4px" }}>
+                  <p style={{ margin: 0, fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600 }}>LIVE RESULTS</p>
+                </div>
+                {suggestions.map((item, i) => (
+                  <div key={i} onClick={() => selectSuggestion(item)} style={{
+                    display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px",
+                    cursor: "pointer", borderBottom: i < suggestions.length - 1 ? `1px solid ${c.border}20` : "none",
+                    transition: "background 0.1s ease",
+                  }} onMouseEnter={e => e.currentTarget.style.background = `${c.gold}08`} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    {item.imageUrl ? (
+                      <div style={{ width: "36px", height: "36px", flexShrink: 0, borderRadius: "2px", overflow: "hidden", border: `1px solid ${c.border}30` }}>
+                        <img src={item.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
+                      </div>
+                    ) : (
+                      <div style={{ width: "36px", height: "36px", flexShrink: 0, background: c.surface, borderRadius: "2px", display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${c.border}30` }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="2" width="18" height="20" rx="2" stroke={c.text3} strokeWidth="1.5"/></svg>
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, color: c.text1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</p>
+                      <p style={{ margin: "2px 0 0", fontSize: "9px", color: c.text3 }}>{item.condition || "Unknown condition"}</p>
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: "right" }}>
+                      <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: c.goldLight }}>${item.price?.value?.toLocaleString() || "—"}</p>
+                      {item.shippingCost != null && item.shippingCost > 0 && <p style={{ margin: "1px 0 0", fontSize: "8px", color: c.text3 }}>+${item.shippingCost} ship</p>}
+                    </div>
+                  </div>
+                ))}
+                <div onClick={() => { setShowSuggestions(false); handleSearch(); }} style={{ padding: "10px 12px", cursor: "pointer", borderTop: `1px solid ${c.border}30`, textAlign: "center" }}>
+                  <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "1px", color: c.cyan }}>SEARCH ALL FOR "{query.toUpperCase()}"</span>
+                </div>
+              </div>
+            )}
           </div>
           <button onClick={handleSearch} disabled={!query.trim() || loading} style={{
             padding: "12px 20px", border: "none", cursor: "pointer",
@@ -1202,9 +1279,10 @@ function CompsScreen() {
             clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))",
             opacity: !query.trim() || loading ? 0.4 : 1, transition: "opacity 0.2s",
           }}>
-            <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: c.darkest, fontFamily: "'Chakra Petch'" }}>{loading ? "..." : "SEARCH"}</span>
+            <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", color: c.darkest, fontFamily: "'Chakra Petch'" }}>{loading ? "..." : "COMPS"}</span>
           </button>
         </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
         {/* Deal Check Toggle */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "14px", padding: "12px 16px", background: dealCheckMode ? `${c.magenta}06` : c.surface, border: `1px solid ${dealCheckMode ? c.magenta + "25" : c.border}`, transition: "all 0.2s ease", borderRadius: "2px" }}>
@@ -1254,7 +1332,6 @@ function CompsScreen() {
         <div style={{ padding: "60px 20px", textAlign: "center" }}>
           <div style={{ width: "32px", height: "32px", border: `2px solid ${c.border}`, borderTop: `2px solid ${c.gold}`, borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.8s linear infinite" }}/>
           <p style={{ fontSize: "11px", color: c.text3, letterSpacing: "1px" }}>PULLING COMPS...</p>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
 
