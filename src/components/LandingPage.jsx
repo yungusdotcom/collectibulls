@@ -253,7 +253,7 @@ export default function LandingPage({ onEnter }) {
           {/* TAGLINE */}
           <div style={{ animation:phase>=2?"tagReveal 0.8s cubic-bezier(0.16,1,0.3,1) forwards":"none", opacity:0, overflow:"hidden", marginTop:"16px", display:"flex", alignItems:"center", gap:"16px" }}>
             <div aria-hidden="true" style={{ flex:1, height:"1px", background:`linear-gradient(270deg,${c.gold}50,transparent)` }}/>
-            <span style={{ fontSize:"11px", letterSpacing:"8px", color:c.text2, fontWeight:500, whiteSpace:"nowrap" }}>TRACK {"\u00B7"} TRADE {"\u00B7"} TRIUMPH</span>
+            <span style={{ fontSize:"11px", letterSpacing:"6px", color:c.text2, fontWeight:500, textAlign:"center", display:"block" }}>TRACK {"\u00B7"} TRADE {"\u00B7"} TRIUMPH</span>
             <div aria-hidden="true" style={{ flex:1, height:"1px", background:`linear-gradient(90deg,${c.gold}50,transparent)` }}/>
           </div>
 
