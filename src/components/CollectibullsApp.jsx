@@ -370,6 +370,7 @@ function VaultScreen({ sharedCards, setSharedCards }) {
   const [addName, setAddName] = useState("");
   const [addCategory, setAddCategory] = useState("Football");
   const [addGrade, setAddGrade] = useState("");
+  const [addGradeCompany, setAddGradeCompany] = useState("");
   const [addValue, setAddValue] = useState("");
   const [addNotes, setAddNotes] = useState("");
   const [addImage, setAddImage] = useState(null);
@@ -416,9 +417,32 @@ function VaultScreen({ sharedCards, setSharedCards }) {
     else if (/nhl|hockey|upper deck/i.test(title)) setAddCategory("Hockey");
     else if (/ufc|mma|fighter/i.test(title)) setAddCategory("UFC/MMA");
     else if (/tennis|atp|wta/i.test(title)) setAddCategory("Tennis");
-    // Auto-detect grade
-    const gradeMatch = item.title.match(/\b(PSA\s*\d+|BGS\s*[\d.]+|CGC\s*[\d.]+|SGC\s*[\d.]+)\b/i);
-    if (gradeMatch) setAddGrade(gradeMatch[1].toUpperCase());
+    // Auto-detect grade from title
+    const gradePatterns = [
+      [/PSA\s*(?:GEM\s*(?:MT|MINT))?\s*10/i, "PSA", "PSA GEM MT 10"],
+      [/PSA\s*(?:MINT)?\s*9\b/i, "PSA", "PSA MINT 9"],
+      [/PSA\s*(?:NM-MT)?\s*8\b/i, "PSA", "PSA NM-MT 8"],
+      [/PSA\s*(?:NM)?\s*7\b/i, "PSA", "PSA NM 7"],
+      [/PSA\s*(?:EX-MT)?\s*6\b/i, "PSA", "PSA EX-MT 6"],
+      [/PSA\s*(?:EX)?\s*5\b/i, "PSA", "PSA EX 5"],
+      [/BGS\s*(?:PRISTINE)?\s*10/i, "BGS", "BGS PRISTINE 10"],
+      [/BGS\s*(?:GEM\s*MINT)?\s*9\.5/i, "BGS", "BGS GEM MINT 9.5"],
+      [/BGS\s*(?:MINT)?\s*9\b/i, "BGS", "BGS MINT 9"],
+      [/BGS\s*8\.5/i, "BGS", "BGS NM-MT+ 8.5"],
+      [/BGS\s*8\b/i, "BGS", "BGS NM-MT 8"],
+      [/CGC\s*(?:PRISTINE)?\s*10/i, "CGC", "CGC PRISTINE 10"],
+      [/CGC\s*(?:GEM\s*MINT)?\s*9\.5/i, "CGC", "CGC GEM MINT 9.5"],
+      [/CGC\s*(?:MINT)?\s*9\b/i, "CGC", "CGC MINT 9"],
+      [/CGC\s*8/i, "CGC", "CGC NM/MT 8"],
+      [/CGC\s*7/i, "CGC", "CGC NM 7"],
+      [/SGC\s*10/i, "SGC", "SGC PRISTINE 10"],
+      [/SGC\s*9\.5/i, "SGC", "SGC GEM MINT 9.5"],
+      [/SGC\s*9\b/i, "SGC", "SGC MINT 9"],
+      [/SGC\s*8/i, "SGC", "SGC NM/MT 8"],
+    ];
+    for (const [pattern, company, value] of gradePatterns) {
+      if (pattern.test(item.title)) { setAddGradeCompany(company); setAddGrade(value); break; }
+    }
     setShowAddSuggestions(false);
     setAddSuggestions([]);
   };
@@ -463,7 +487,7 @@ function VaultScreen({ sharedCards, setSharedCards }) {
       image: addImage || null,
     };
     setSharedCards(prev => [newCard, ...prev]);
-    setAddName(""); setAddCategory("Football"); setAddGrade(""); setAddValue(""); setAddNotes(""); setAddImage(null);
+    setAddName(""); setAddCategory("Football"); setAddGrade(""); setAddGradeCompany(""); setAddValue(""); setAddNotes(""); setAddImage(null);
     setShowAddCard(false);
   };
 
@@ -708,17 +732,41 @@ function VaultScreen({ sharedCards, setSharedCards }) {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {/* Category + Grade */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>CATEGORY</label>
-                    <select value={addCategory} onChange={e => setAddCategory(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "11px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", cursor: "pointer", appearance: "none", borderRadius: "2px" }}>
-                      {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                {/* Category */}
+                <div>
+                  <label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>CATEGORY</label>
+                  <select value={addCategory} onChange={e => setAddCategory(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "11px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", cursor: "pointer", appearance: "none", borderRadius: "2px" }}>
+                    {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </div>
+
+                {/* Grading */}
+                <div>
+                  <label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>GRADING</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                    <select value={addGradeCompany} onChange={e => { setAddGradeCompany(e.target.value); setAddGrade(""); }} style={{ width: "100%", padding: "10px 12px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "11px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", borderRadius: "2px", cursor: "pointer", appearance: "none" }}>
+                      <option value="">Ungraded</option>
+                      <option value="PSA">PSA</option>
+                      <option value="BGS">BGS</option>
+                      <option value="CGC">CGC</option>
+                      <option value="SGC">SGC</option>
                     </select>
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>GRADE</label>
-                    <input value={addGrade} onChange={e => setAddGrade(e.target.value)} placeholder="e.g. PSA 10" style={{ width: "100%", padding: "10px 12px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "11px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", borderRadius: "2px" }}/>
+                    {addGradeCompany && (
+                      <select value={addGrade} onChange={e => setAddGrade(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "11px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", borderRadius: "2px", cursor: "pointer", appearance: "none" }}>
+                        <option value="">Select score</option>
+                        {(addGradeCompany === "PSA" ? [
+                          ["GEM MT 10","10"],["MINT 9","9"],["NM-MT 8","8"],["NM 7","7"],["EX-MT 6","6"],["EX 5","5"],["VG-EX 4","4"],["VG 3","3"],["GOOD 2","2"],["PR 1","1"]
+                        ] : addGradeCompany === "BGS" ? [
+                          ["PRISTINE 10","10"],["GEM MINT 9.5","9.5"],["MINT 9","9"],["NM-MT+ 8.5","8.5"],["NM-MT 8","8"],["NM+ 7.5","7.5"],["NM 7","7"],["EX/NM+ 6.5","6.5"],["EX/NM 6","6"]
+                        ] : addGradeCompany === "CGC" ? [
+                          ["PRISTINE 10","10"],["GEM MINT 9.5","9.5"],["MINT 9","9"],["NM/MT+ 8.5","8.5"],["NM/MT 8","8"],["NM+ 7.5","7.5"],["NM 7","7"],["EX/NM+ 6.5","6.5"],["EX/NM 6","6"]
+                        ] : [
+                          ["PRISTINE 10","10"],["GEM MINT 9.5","9.5"],["MINT 9","9"],["NM/MT+ 8.5","8.5"],["NM/MT 8","8"],["NM+ 7.5","7.5"],["NM 7","7"]
+                        ]).map(([label, val]) => (
+                          <option key={val} value={`${addGradeCompany} ${label}`}>{label}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
                 {/* Value */}
