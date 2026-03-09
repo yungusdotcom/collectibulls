@@ -368,17 +368,88 @@ function VaultScreen({ sharedCards, setSharedCards }) {
   const [showFilters, setShowFilters] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
   const [addName, setAddName] = useState("");
-  const [addCategory, setAddCategory] = useState("Pokemon");
+  const [addCategory, setAddCategory] = useState("Football");
   const [addGrade, setAddGrade] = useState("");
   const [addValue, setAddValue] = useState("");
   const [addNotes, setAddNotes] = useState("");
+  const [addImage, setAddImage] = useState(null);
+  const [addSuggestions, setAddSuggestions] = useState([]);
+  const [addSugLoading, setAddSugLoading] = useState(false);
+  const [showAddSuggestions, setShowAddSuggestions] = useState(false);
+  const addDebounceRef = useRef(null);
+  const addFileRef = useRef(null);
   const cards = sharedCards;
+
+  const allCategories = ["Pokemon","Football","Basketball","Baseball","Soccer","Hockey","UFC/MMA","Tennis","MTG","Yu-Gi-Oh"];
+
+  // Typeahead for add card
+  const handleAddNameChange = (val) => {
+    setAddName(val);
+    setShowAddSuggestions(true);
+    if (addDebounceRef.current) clearTimeout(addDebounceRef.current);
+    if (val.trim().length < 3) { setAddSuggestions([]); setAddSugLoading(false); return; }
+    setAddSugLoading(true);
+    addDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/ebay?q=${encodeURIComponent(val.trim())}&limit=6&sort=relevance&category=all_cards`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setAddSuggestions(data.items || []);
+      } catch { setAddSuggestions([]); }
+      finally { setAddSugLoading(false); }
+    }, 400);
+  };
+
+  const selectAddSuggestion = (item) => {
+    setAddName(item.title);
+    setAddImage(item.imageUrl || null);
+    if (item.price?.value) setAddValue(item.price.value.toString());
+    // Auto-detect category from title
+    const title = item.title.toLowerCase();
+    if (/pokemon|pikachu|charizard/i.test(title)) setAddCategory("Pokemon");
+    else if (/mtg|magic|planeswalker/i.test(title)) setAddCategory("MTG");
+    else if (/yu-gi-oh|yugioh|dark magician|blue.eyes/i.test(title)) setAddCategory("Yu-Gi-Oh");
+    else if (/nfl|football|quarterback|touchdown|panini prizm|donruss|mosaic/i.test(title)) setAddCategory("Football");
+    else if (/nba|basketball|dunk|hoops/i.test(title)) setAddCategory("Basketball");
+    else if (/mlb|baseball|topps chrome|bowman/i.test(title)) setAddCategory("Baseball");
+    else if (/soccer|premier league|fifa|mls/i.test(title)) setAddCategory("Soccer");
+    else if (/nhl|hockey|upper deck/i.test(title)) setAddCategory("Hockey");
+    else if (/ufc|mma|fighter/i.test(title)) setAddCategory("UFC/MMA");
+    else if (/tennis|atp|wta/i.test(title)) setAddCategory("Tennis");
+    // Auto-detect grade
+    const gradeMatch = item.title.match(/\b(PSA\s*\d+|BGS\s*[\d.]+|CGC\s*[\d.]+|SGC\s*[\d.]+)\b/i);
+    if (gradeMatch) setAddGrade(gradeMatch[1].toUpperCase());
+    setShowAddSuggestions(false);
+    setAddSuggestions([]);
+  };
+
+  const handleAddImage = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    if (file.size > 2 * 1024 * 1024) { alert("Image must be under 2MB"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxDim = 400;
+        const scale = Math.min(maxDim / img.width, maxDim / img.height);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setAddImage(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleAddCard = () => {
     if (!addName.trim() || !addValue) return;
     const newCard = {
       id: Date.now(),
-      name: addName.replace(/[<>"'&]/g, "").trim().slice(0, 100),
+      name: addName.replace(/[<>"'&]/g, "").trim().slice(0, 150),
       category: addCategory,
       grade: addGrade || "Ungraded",
       condition: "Unknown",
@@ -389,9 +460,10 @@ function VaultScreen({ sharedCards, setSharedCards }) {
       year: new Date().getFullYear(),
       rarity: "",
       notes: addNotes.replace(/[<>"'&]/g, "").trim().slice(0, 300),
+      image: addImage || null,
     };
     setSharedCards(prev => [newCard, ...prev]);
-    setAddName(""); setAddCategory("Pokemon"); setAddGrade(""); setAddValue(""); setAddNotes("");
+    setAddName(""); setAddCategory("Football"); setAddGrade(""); setAddValue(""); setAddNotes(""); setAddImage(null);
     setShowAddCard(false);
   };
 
@@ -484,7 +556,7 @@ function VaultScreen({ sharedCards, setSharedCards }) {
             const cc=catColors[card.category]||c.text3; const isUp=card.change>=0;
             return (
               <div key={card.id} className="card-tile" onClick={()=>setSelectedCard(card)} style={{ clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))", background: `linear-gradient(165deg, ${c.surfaceAlt}, ${c.dark})`, animation: `slideUp 0.35s ease-out ${i*0.04}s forwards`, opacity: 0 }}>
-                <div style={{ padding: "3px 3px 0" }}><CardPlaceholder category={card.category}/></div>
+                <div style={{ padding: "3px 3px 0" }}>{card.image ? <div style={{ width: "100%", aspectRatio: "2.5/3.5", borderRadius: "3px", overflow: "hidden" }}><img src={card.image} alt={card.name} style={{ width: "100%", height: "100%", objectFit: "contain", background: c.darkest }}/></div> : <CardPlaceholder category={card.category}/>}</div>
                 <div style={{ padding: "10px 12px 12px" }}>
                   <div style={{ display: "inline-block", padding: "1px 6px", marginBottom: "5px", fontSize: "7px", fontWeight: 700, letterSpacing: "1.5px", color: cc, background: `${cc}10`, border: `1px solid ${cc}18` }}>{card.category.toUpperCase()}</div>
                   <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, color: c.text1, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{card.name}</p>
@@ -507,7 +579,7 @@ function VaultScreen({ sharedCards, setSharedCards }) {
             const cc=catColors[card.category]||c.text3; const isUp=card.change>=0;
             return (
               <div key={card.id} className="list-row" onClick={()=>setSelectedCard(card)} style={{ display: "flex", alignItems: "center", gap: "14px", borderBottom: i<filtered.length-1?`1px solid ${c.border}25`:"none", animation: `slideUp 0.3s ease-out ${i*0.03}s forwards`, opacity: 0, cursor: "pointer", borderRadius: "2px", padding: "12px 10px", margin: "0 -10px" }}>
-                <div style={{ width: "44px", height: "60px", flexShrink: 0 }}><CardPlaceholder category={card.category}/></div>
+                <div style={{ width: "44px", height: "60px", flexShrink: 0 }}>{card.image ? <div style={{ width: "100%", height: "100%", borderRadius: "2px", overflow: "hidden" }}><img src={card.image} alt={card.name} style={{ width: "100%", height: "100%", objectFit: "contain", background: c.darkest }}/></div> : <CardPlaceholder category={card.category}/>}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: c.text1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.name}</p>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", flexWrap: "wrap" }}>
@@ -542,7 +614,15 @@ function VaultScreen({ sharedCards, setSharedCards }) {
           <div onClick={e=>e.stopPropagation()} style={{ width: "100%", maxWidth: "480px", maxHeight: "85vh", overflowY: "auto", background: `linear-gradient(180deg, ${c.surfaceAlt}, ${c.dark})`, borderTop: `1px solid ${c.borderLight}40`, animation: "modalIn 0.3s ease forwards", clipPath: "polygon(0 12px, 12px 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%)", position: "relative" }}>
             <div style={{ position: "absolute", top: 0, left: "12px", right: "12px", height: "1px", background: `linear-gradient(90deg, transparent, ${c.gold}50, transparent)` }}/>
             <button onClick={()=>setSelectedCard(null)} style={{ position: "absolute", top: "16px", right: "16px", background: `${c.darkest}80`, border: `1px solid ${c.border}`, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 1, borderRadius: "2px" }}><CloseIcon/></button>
-            <div style={{ padding: "24px 24px 0", display: "flex", justifyContent: "center" }}><div style={{ width: "140px" }}><CardPlaceholder category={selectedCard.category}/></div></div>
+            <div style={{ padding: "24px 24px 0", display: "flex", justifyContent: "center" }}>
+              <div style={{ width: "140px" }}>
+                {selectedCard.image ? (
+                  <div style={{ width: "100%", aspectRatio: "2.5/3.5", borderRadius: "4px", overflow: "hidden", border: `1px solid ${c.border}30` }}>
+                    <img src={selectedCard.image} alt={selectedCard.name} style={{ width: "100%", height: "100%", objectFit: "contain", background: c.darkest }}/>
+                  </div>
+                ) : <CardPlaceholder category={selectedCard.category}/>}
+              </div>
+            </div>
             <div style={{ padding: "20px 24px 32px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                 <span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "1.5px", padding: "2px 8px", color: catColors[selectedCard.category], background: `${catColors[selectedCard.category]}12`, border: `1px solid ${catColors[selectedCard.category]}20` }}>{selectedCard.category.toUpperCase()}</span>
@@ -585,19 +665,77 @@ function VaultScreen({ sharedCards, setSharedCards }) {
           <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "480px", maxHeight: "90vh", overflowY: "auto", background: `linear-gradient(180deg, ${c.surfaceAlt}, ${c.dark})`, borderTop: `1px solid ${c.borderLight}40`, animation: "modalIn 0.3s ease forwards", clipPath: "polygon(0 12px, 12px 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%)", position: "relative" }}>
             <div style={{ position: "absolute", top: 0, left: "12px", right: "12px", height: "1px", background: `linear-gradient(90deg, transparent, ${c.gold}50, transparent)` }}/>
             <div style={{ padding: "24px 24px 32px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                 <div><p style={{ margin: 0, fontSize: "9px", letterSpacing: "3px", color: c.text3 }}>NEW CARD</p><p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 800, fontFamily: "'Anybody'", color: c.text1 }}>ADD TO VAULT</p></div>
                 <button onClick={() => setShowAddCard(false)} style={{ background: `${c.darkest}80`, border: `1px solid ${c.border}`, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", borderRadius: "2px" }}><CloseIcon/></button>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>CARD NAME</label><input value={addName} onChange={e => setAddName(e.target.value)} placeholder="e.g. Charizard 1st Edition" style={{ width: "100%", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "13px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}/></div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>CATEGORY</label><select value={addCategory} onChange={e => setAddCategory(e.target.value)} style={{ width: "100%", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "12px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", cursor: "pointer", appearance: "none", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}>{["Pokemon","Sports","MTG","Yu-Gi-Oh"].map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>
-                  <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>GRADE</label><input value={addGrade} onChange={e => setAddGrade(e.target.value)} placeholder="e.g. PSA 10" style={{ width: "100%", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "12px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}/></div>
+
+              {/* Card image preview + upload */}
+              <div style={{ display: "flex", gap: "16px", marginBottom: "16px", alignItems: "flex-start" }}>
+                <div onClick={() => addFileRef.current?.click()} style={{ width: "80px", height: "112px", flexShrink: 0, borderRadius: "4px", overflow: "hidden", border: `1px solid ${c.border}40`, cursor: "pointer", background: c.darkest, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                  {addImage ? (
+                    <img src={addImage} alt="Card" style={{ width: "100%", height: "100%", objectFit: "contain" }}/>
+                  ) : (
+                    <div style={{ textAlign: "center" }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke={c.text3} strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      <p style={{ margin: "4px 0 0", fontSize: "6px", letterSpacing: "1px", color: c.text3 }}>ADD PHOTO</p>
+                    </div>
+                  )}
+                  {addImage && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2px", background: `${c.darkest}CC`, textAlign: "center" }}><span style={{ fontSize: "5px", letterSpacing: "1px", color: c.gold }}>CHANGE</span></div>}
                 </div>
-                <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>ESTIMATED VALUE</label><div style={{ position: "relative" }}><span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "14px", color: c.text3, fontWeight: 600 }}>$</span><input value={addValue} onChange={e => setAddValue(e.target.value)} type="number" placeholder="0.00" style={{ width: "100%", padding: "12px 14px 12px 28px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "14px", fontWeight: 600, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}/></div></div>
-                <div><label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>NOTES (OPTIONAL)</label><input value={addNotes} onChange={e => setAddNotes(e.target.value)} placeholder="Set, variant, condition details..." style={{ width: "100%", padding: "12px 14px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "12px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))" }}/></div>
-                <button onClick={handleAddCard} style={{ width: "100%", padding: "14px", border: "none", cursor: "pointer", marginTop: "6px", background: `linear-gradient(135deg, ${c.gold}, ${c.goldDim})`, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))", opacity: !addName.trim() || !addValue ? 0.4 : 1 }}>
+                <input ref={addFileRef} type="file" accept="image/*" onChange={handleAddImage} style={{ display: "none" }}/>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: "0 0 4px", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600 }}>SEARCH OR TYPE CARD NAME</p>
+                  <div style={{ position: "relative", zIndex: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: c.surface, border: `1px solid ${showAddSuggestions && addSuggestions.length > 0 ? c.gold + "40" : c.border}`, borderRadius: "2px" }}>
+                      <SearchIconSvg/>
+                      <input value={addName} onChange={e => handleAddNameChange(e.target.value)} onKeyDown={e => { if (e.key === "Escape") setShowAddSuggestions(false); }} placeholder="e.g. Jahmyr Gibbs Prizm" style={{ flex: 1, background: "none", border: "none", outline: "none", color: c.text1, fontSize: "12px", fontFamily: "'Chakra Petch'", fontWeight: 500 }}/>
+                      {addSugLoading && <div style={{ width: "12px", height: "12px", border: `2px solid ${c.border}`, borderTop: `2px solid ${c.gold}`, borderRadius: "50%", animation: "spin 0.6s linear infinite", flexShrink: 0 }}/>}
+                    </div>
+                    {showAddSuggestions && addSuggestions.length > 0 && (
+                      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: "4px", background: c.dark, border: `1px solid ${c.gold}25`, zIndex: 9999, maxHeight: "200px", overflowY: "auto", boxShadow: `0 8px 32px rgba(0,0,0,0.8)`, borderRadius: "4px" }}>
+                        {addSuggestions.map((item, i) => (
+                          <div key={i} onClick={() => selectAddSuggestion(item)} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", cursor: "pointer", borderBottom: i < addSuggestions.length - 1 ? `1px solid ${c.border}20` : "none" }} onMouseEnter={e => e.currentTarget.style.background = `${c.gold}08`} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            {item.imageUrl && <div style={{ width: "28px", height: "28px", flexShrink: 0, borderRadius: "2px", overflow: "hidden" }}><img src={item.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}/></div>}
+                            <p style={{ margin: 0, fontSize: "10px", fontWeight: 500, color: c.text1, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</p>
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: c.goldLight, flexShrink: 0 }}>${item.price?.value?.toLocaleString() || ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {/* Category + Grade */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>CATEGORY</label>
+                    <select value={addCategory} onChange={e => setAddCategory(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "11px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", cursor: "pointer", appearance: "none", borderRadius: "2px" }}>
+                      {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>GRADE</label>
+                    <input value={addGrade} onChange={e => setAddGrade(e.target.value)} placeholder="e.g. PSA 10" style={{ width: "100%", padding: "10px 12px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "11px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", borderRadius: "2px" }}/>
+                  </div>
+                </div>
+                {/* Value */}
+                <div>
+                  <label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>ESTIMATED VALUE</label>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", fontSize: "13px", color: c.text3, fontWeight: 600 }}>$</span>
+                    <input value={addValue} onChange={e => setAddValue(e.target.value)} type="number" placeholder="0.00" style={{ width: "100%", padding: "10px 12px 10px 26px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "13px", fontWeight: 600, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", borderRadius: "2px" }}/>
+                  </div>
+                </div>
+                {/* Notes */}
+                <div>
+                  <label style={{ display: "block", fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 600, marginBottom: "6px" }}>NOTES (OPTIONAL)</label>
+                  <input value={addNotes} onChange={e => setAddNotes(e.target.value)} placeholder="Set, variant, condition details..." style={{ width: "100%", padding: "10px 12px", background: c.surface, border: `1px solid ${c.border}`, color: c.text1, fontSize: "11px", fontWeight: 500, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", borderRadius: "2px" }}/>
+                </div>
+                {/* Submit */}
+                <button onClick={handleAddCard} style={{ width: "100%", padding: "14px", border: "none", cursor: "pointer", marginTop: "4px", background: `linear-gradient(135deg, ${c.gold}, ${c.goldDim})`, clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))", opacity: !addName.trim() || !addValue ? 0.4 : 1 }}>
                   <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "2px", color: c.darkest, fontFamily: "'Chakra Petch'" }}>ADD TO VAULT</span>
                 </button>
               </div>
@@ -1411,9 +1549,14 @@ function CompsScreen() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <div style={{ width: "3px", height: "16px", background: c.cyan, borderRadius: "2px" }}/>
-                  <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>MARKET PRICING</p>
+                  <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>ACTIVE LISTING PRICES</p>
                 </div>
-                <span style={{ fontSize: "9px", color: c.text3 }}>{results.total.toLocaleString()} listings found</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: c.green, boxShadow: `0 0 6px ${c.green}60` }}/>
+                  <span style={{ fontSize: "9px", color: c.text3 }}>LIVE</span>
+                  <span style={{ fontSize: "9px", color: c.text3 }}>{"\u00B7"}</span>
+                  <span style={{ fontSize: "9px", color: c.text3 }}>{results.total.toLocaleString()} listings</span>
+                </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr 1px 1fr 1px 1fr", gap: 0 }}>
                 {[{ l: "AVG", v: relevantStats?.avg },null,{ l: "MEDIAN", v: relevantStats?.median },null,{ l: "LOW", v: relevantStats?.min },null,{ l: "HIGH", v: relevantStats?.max }].map((s, i) =>
@@ -1449,12 +1592,27 @@ function CompsScreen() {
             ))}
           </div>
 
-          {/* Similar Listings */}
-          <div className="slide-up d4">
+          {/* Sold Data Placeholder */}
+          <div className="slide-up d4" style={{ marginBottom: "12px" }}>
+            <div className="panel" style={{ padding: "20px", background: `linear-gradient(165deg, ${c.surface}, ${c.dark})`, textAlign: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "8px" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 22C17.5 22 22 17.5 22 12S17.5 2 12 2 2 6.5 2 12 6.5 22 12 22Z" stroke={c.gold} strokeWidth="1.8" fill="none"/><path d="M12 6V12L16 14" stroke={c.gold} strokeWidth="1.8" strokeLinecap="round"/></svg>
+                <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.gold, fontWeight: 600 }}>SOLD DATA</p>
+              </div>
+              <p style={{ margin: 0, fontSize: "11px", color: c.text3, lineHeight: 1.6 }}>
+                Completed sale prices coming soon.
+                <br/>
+                <span style={{ fontSize: "10px", color: c.text3 }}>This will show actual prices paid in the last 90 days.</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Active Listings */}
+          <div className="slide-up d5">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <div style={{ width: "3px", height: "16px", background: c.magenta, borderRadius: "2px" }}/>
-                <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>SIMILAR LISTINGS</p>
+                <p style={{ margin: 0, fontSize: "10px", letterSpacing: "3px", color: c.text3, fontWeight: 600 }}>ACTIVE LISTINGS</p>
               </div>
               <button onClick={saveComp} style={{ padding: "4px 12px", background: `${c.gold}10`, border: `1px solid ${c.gold}25`, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", borderRadius: "2px" }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" stroke={c.gold} strokeWidth="1.8" fill="none"/></svg>

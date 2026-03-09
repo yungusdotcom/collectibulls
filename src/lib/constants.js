@@ -20,9 +20,16 @@ export const c = {
 
 export const catColors = {
   Pokemon: "#FFD43B",
-  Sports: "#60A5FA",
   MTG: "#A78BFA",
   "Yu-Gi-Oh": "#FB923C",
+  Football: "#60A5FA",
+  Basketball: "#FF6B35",
+  Baseball: "#E74C3C",
+  Soccer: "#2ECC71",
+  Hockey: "#00CED1",
+  "UFC/MMA": "#DC143C",
+  Tennis: "#9ACD32",
+  Sports: "#60A5FA",
 };
 
 export const defaultVaultCards = [];
@@ -42,7 +49,7 @@ export const achievementData = [
   { id:8,title:"WHALE",desc:"Portfolio over $100,000",icon:"crown",unlocked:false },
 ];
 
-export const categories = ["All", "Pokemon", "Sports", "MTG", "Yu-Gi-Oh"];
+export const categories = ["All", "Pokemon", "Football", "Basketball", "Baseball", "Soccer", "Hockey", "UFC/MMA", "Tennis", "MTG", "Yu-Gi-Oh"];
 export const gradeOptions = ["All Grades","PSA 10","PSA 9","PSA 8","PSA 7","BGS 9.5","CGC 9","CGC 7","CGC 6"];
 export const sortOptions = [
   { label: "Value: High", key: "valueDesc" },
