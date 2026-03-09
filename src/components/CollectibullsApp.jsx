@@ -639,13 +639,40 @@ function VaultScreen({ sharedCards, setSharedCards }) {
             <div style={{ position: "absolute", top: 0, left: "12px", right: "12px", height: "1px", background: `linear-gradient(90deg, transparent, ${c.gold}50, transparent)` }}/>
             <button onClick={()=>setSelectedCard(null)} style={{ position: "absolute", top: "16px", right: "16px", background: `${c.darkest}80`, border: `1px solid ${c.border}`, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 1, borderRadius: "2px" }}><CloseIcon/></button>
             <div style={{ padding: "24px 24px 0", display: "flex", justifyContent: "center" }}>
-              <div style={{ width: "140px" }}>
+              <div style={{ width: "140px", position: "relative", cursor: "pointer" }} onClick={() => document.getElementById("detail-img-upload")?.click()}>
                 {selectedCard.image ? (
                   <div style={{ width: "100%", aspectRatio: "2.5/3.5", borderRadius: "4px", overflow: "hidden", border: `1px solid ${c.border}30` }}>
                     <img src={selectedCard.image} alt={selectedCard.name} style={{ width: "100%", height: "100%", objectFit: "contain", background: c.darkest }}/>
                   </div>
                 ) : <CardPlaceholder category={selectedCard.category}/>}
+                <div style={{ position: "absolute", bottom: selectedCard.image ? "4px" : "4px", left: "50%", transform: "translateX(-50%)", padding: "4px 12px", background: `${c.darkest}DD`, border: `1px solid ${c.gold}40`, borderRadius: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke={c.gold} strokeWidth="1.8" fill="none"/><circle cx="12" cy="13" r="4" stroke={c.gold} strokeWidth="1.8" fill="none"/></svg>
+                  <span style={{ fontSize: "7px", letterSpacing: "1px", color: c.gold, fontWeight: 600 }}>{selectedCard.image ? "CHANGE" : "ADD PHOTO"}</span>
+                </div>
               </div>
+              <input id="detail-img-upload" type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file || !file.type.startsWith("image/")) return;
+                if (file.size > 2 * 1024 * 1024) { alert("Image must be under 2MB"); return; }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  const img = new Image();
+                  img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    const maxDim = 400;
+                    const scale = Math.min(maxDim / img.width, maxDim / img.height);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+                    setSharedCards(prev => prev.map(cd => cd.id === selectedCard.id ? { ...cd, image: dataUrl } : cd));
+                    setSelectedCard(prev => ({ ...prev, image: dataUrl }));
+                  };
+                  img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+                e.target.value = "";
+              }}/>
             </div>
             <div style={{ padding: "20px 24px 32px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
