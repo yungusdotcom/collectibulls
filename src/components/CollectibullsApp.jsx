@@ -374,6 +374,9 @@ function VaultScreen({ sharedCards, setSharedCards }) {
   const [addValue, setAddValue] = useState("");
   const [addNotes, setAddNotes] = useState("");
   const [addImage, setAddImage] = useState(null);
+  const [addCert, setAddCert] = useState("");
+  const [certLoading, setCertLoading] = useState(false);
+  const [certError, setCertError] = useState("");
   const [addSuggestions, setAddSuggestions] = useState([]);
   const [addSugLoading, setAddSugLoading] = useState(false);
   const [showAddSuggestions, setShowAddSuggestions] = useState(false);
@@ -469,6 +472,45 @@ function VaultScreen({ sharedCards, setSharedCards }) {
     reader.readAsDataURL(file);
   };
 
+  // PSA Cert Lookup
+  const handleCertLookup = async () => {
+    if (!addCert.trim() || !/^\d+$/.test(addCert.trim())) { setCertError("Enter a valid cert number"); return; }
+    setCertLoading(true); setCertError("");
+    try {
+      const res = await fetch(`/api/psa?cert=${addCert.trim()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Cert not found");
+      // Auto-populate fields from PSA data
+      const title = [data.year, data.brand, data.subject, data.cardNumber ? `#${data.cardNumber}` : ""].filter(Boolean).join(" ");
+      if (title) setAddName(title);
+      if (data.imageFront) setAddImage(data.imageFront);
+      if (data.grade) {
+        const gradeNum = data.grade.match(/[\d.]+/)?.[0] || "";
+        const gradeLabel = data.grade;
+        setAddGradeCompany("PSA");
+        // Map PSA grade text to our dropdown values
+        const psaMap = { "10": "PSA GEM MT 10", "9": "PSA MINT 9", "8": "PSA NM-MT 8", "7": "PSA NM 7", "6": "PSA EX-MT 6", "5": "PSA EX 5", "4": "PSA VG-EX 4", "3": "PSA VG 3", "2": "PSA GOOD 2", "1": "PSA PR 1" };
+        setAddGrade(psaMap[gradeNum] || `PSA ${gradeLabel}`);
+      }
+      if (data.psaEstimate) setAddValue(data.psaEstimate.toString());
+      // Auto-detect category from PSA category field
+      const cat = (data.category || "").toLowerCase();
+      if (/baseball/i.test(cat)) setAddCategory("Baseball");
+      else if (/basketball/i.test(cat)) setAddCategory("Basketball");
+      else if (/football/i.test(cat)) setAddCategory("Football");
+      else if (/hockey/i.test(cat)) setAddCategory("Hockey");
+      else if (/soccer/i.test(cat)) setAddCategory("Soccer");
+      else if (/tennis/i.test(cat)) setAddCategory("Tennis");
+      else if (/ufc|mma|boxing/i.test(cat)) setAddCategory("UFC/MMA");
+      else if (/pokemon/i.test(cat)) setAddCategory("Pokemon");
+      else if (/magic/i.test(cat)) setAddCategory("MTG");
+      else if (/yu-gi-oh/i.test(cat)) setAddCategory("Yu-Gi-Oh");
+      setAddNotes(`PSA Cert #${addCert.trim()}${data.variety ? ` | ${data.variety}` : ""}${data.population ? ` | Pop: ${data.population}` : ""}`);
+    } catch (e) {
+      setCertError(e.message);
+    } finally { setCertLoading(false); }
+  };
+
   const handleAddCard = () => {
     if (!addName.trim() || !addValue) return;
     const newCard = {
@@ -487,7 +529,7 @@ function VaultScreen({ sharedCards, setSharedCards }) {
       image: addImage || null,
     };
     setSharedCards(prev => [newCard, ...prev]);
-    setAddName(""); setAddCategory("Football"); setAddGrade(""); setAddGradeCompany(""); setAddValue(""); setAddNotes(""); setAddImage(null);
+    setAddName(""); setAddCategory("Football"); setAddGrade(""); setAddGradeCompany(""); setAddValue(""); setAddNotes(""); setAddImage(null); setAddCert(""); setCertError("");
     setShowAddCard(false);
   };
 
@@ -719,6 +761,27 @@ function VaultScreen({ sharedCards, setSharedCards }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                 <div><p style={{ margin: 0, fontSize: "9px", letterSpacing: "3px", color: c.text3 }}>NEW CARD</p><p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 800, fontFamily: "'Anybody'", color: c.text1 }}>ADD TO VAULT</p></div>
                 <button onClick={() => setShowAddCard(false)} style={{ background: `${c.darkest}80`, border: `1px solid ${c.border}`, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", borderRadius: "2px" }}><CloseIcon/></button>
+              </div>
+
+              {/* PSA Cert Lookup */}
+              <div style={{ marginBottom: "16px", padding: "14px", background: `${c.gold}06`, border: `1px solid ${c.gold}15`, borderRadius: "4px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 12L11 14L15 10M21 12C21 16.97 12 22 12 22C12 22 3 16.97 3 12C3 7.03 7.03 2 12 2C16.97 2 21 7.03 21 12Z" stroke={c.gold} strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span style={{ fontSize: "9px", letterSpacing: "2px", color: c.gold, fontWeight: 600 }}>PSA CERT LOOKUP</span>
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input value={addCert} onChange={e => { setAddCert(e.target.value.replace(/\D/g, "")); setCertError(""); }} placeholder="Enter PSA cert number" style={{ flex: 1, padding: "10px 12px", background: c.surface, border: `1px solid ${certError ? c.red : c.border}`, color: c.text1, fontSize: "13px", fontWeight: 600, outline: "none", boxSizing: "border-box", fontFamily: "'Chakra Petch'", borderRadius: "2px", letterSpacing: "1px" }}/>
+                  <button onClick={handleCertLookup} disabled={certLoading || !addCert.trim()} style={{ padding: "10px 16px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${c.gold}, ${c.goldDim})`, borderRadius: "2px", opacity: certLoading || !addCert.trim() ? 0.4 : 1 }}>
+                    <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "1px", color: c.darkest }}>{certLoading ? "..." : "LOOKUP"}</span>
+                  </button>
+                </div>
+                {certError && <p style={{ margin: "6px 0 0", fontSize: "9px", color: c.red }}>{certError}</p>}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "4px" }}>
+                <div style={{ flex: 1, height: "1px", background: c.border }}/>
+                <span style={{ fontSize: "8px", letterSpacing: "2px", color: c.text3, fontWeight: 500 }}>OR SEARCH</span>
+                <div style={{ flex: 1, height: "1px", background: c.border }}/>
               </div>
 
               {/* Card image preview + upload */}
