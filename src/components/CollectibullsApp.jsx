@@ -483,9 +483,22 @@ function VaultScreen({ sharedCards, setSharedCards }) {
       // Auto-populate fields from PSA data
       const title = [data.year, data.brand, data.subject, data.cardNumber ? `#${data.cardNumber}` : ""].filter(Boolean).join(" ");
       if (title) setAddName(title);
-      // Try the API image first, then the constructed URL
+      // Try the API image first, then the constructed URL, with load verification
       const imgUrl = data.imageFront || data.imageFrontConstructed;
-      if (imgUrl) setAddImage(imgUrl);
+      if (imgUrl) {
+        // Test if the image actually loads
+        const testImg = new Image();
+        testImg.onload = () => setAddImage(imgUrl);
+        testImg.onerror = () => {
+          // If constructed URL fails, try alternate patterns
+          const altUrl = `https://d1htnxwo4o0jhw.cloudfront.net/cert/${data.certNumber}/small_front.jpg`;
+          const testImg2 = new Image();
+          testImg2.onload = () => setAddImage(altUrl);
+          testImg2.onerror = () => {}; // No image available
+          testImg2.src = altUrl;
+        };
+        testImg.src = imgUrl;
+      }
       if (data.grade) {
         const gradeNum = data.grade.match(/[\d.]+/)?.[0] || "";
         const gradeLabel = data.grade;

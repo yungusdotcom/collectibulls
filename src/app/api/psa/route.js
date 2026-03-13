@@ -49,16 +49,18 @@ export async function GET(request) {
     // The PSA API nests cert data under PSACert
     const psaCert = data.PSACert || data;
 
-    // PSA image URLs follow a known pattern using the cert number
-    // Images are hosted on PSA's CDN for cards graded after Oct 2021
+    // PSA image URLs - try the CloudFront CDN pattern
     const certNum = psaCert.CertNumber || cert;
-    const psaImageBase = `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNum}`;
-
+    
     // Try multiple possible image field names from the API response
     const imageFront = psaCert.ImageFrontSmall || psaCert.ImageFrontLarge || psaCert.ImageFront 
       || psaCert.imageFrontSmall || psaCert.imageFrontLarge || psaCert.imageFront
       || psaCert.FrontImageURL || psaCert.frontImageURL
+      || psaCert.FrontImageSmallURL || psaCert.FrontSmallImage
       || null;
+
+    // Constructed CDN URL as fallback
+    const imageFrontConstructed = `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNum}/small_front.jpg`;
 
     // Build a clean response - include raw data for debugging
     const result = {
@@ -74,7 +76,7 @@ export async function GET(request) {
       imageFront: imageFront,
       imageBack: psaCert.ImageBackSmall || psaCert.ImageBack || psaCert.imageBackSmall || null,
       // Constructed image URL as fallback
-      imageFrontConstructed: `${psaImageBase}/small_front.jpg`,
+      imageFrontConstructed: imageFrontConstructed,
       specNumber: psaCert.SpecNumber || psaCert.specNumber || "",
       specID: psaCert.SpecID || psaCert.specID || "",
       psaEstimate: psaCert.PSAEstimate || psaCert.psaEstimate || null,
