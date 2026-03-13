@@ -46,33 +46,43 @@ export async function GET(request) {
 
     const data = await response.json();
 
-    // Extract the cert data from the PSA response
+    // The PSA API nests cert data under PSACert
     const psaCert = data.PSACert || data;
 
-    // Build a clean response
+    // PSA image URLs follow a known pattern using the cert number
+    // Images are hosted on PSA's CDN for cards graded after Oct 2021
+    const certNum = psaCert.CertNumber || cert;
+    const psaImageBase = `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNum}`;
+
+    // Try multiple possible image field names from the API response
+    const imageFront = psaCert.ImageFrontSmall || psaCert.ImageFrontLarge || psaCert.ImageFront 
+      || psaCert.imageFrontSmall || psaCert.imageFrontLarge || psaCert.imageFront
+      || psaCert.FrontImageURL || psaCert.frontImageURL
+      || null;
+
+    // Build a clean response - include raw data for debugging
     const result = {
-      certNumber: psaCert.CertNumber || cert,
-      year: psaCert.Year || "",
-      brand: psaCert.Brand || "",
-      subject: psaCert.Subject || "",
-      cardNumber: psaCert.CardNumber || "",
-      category: psaCert.Category || "",
-      grade: psaCert.CardGrade || "",
-      labelType: psaCert.LabelType || "",
-      variety: psaCert.Variety || "",
-      qualifierGrade: psaCert.QualifierGrade || "",
-      // Front and back images (available for cards graded after Oct 2021)
-      imageFront: psaCert.ImageFrontSmall || psaCert.ImageFront || null,
-      imageBack: psaCert.ImageBackSmall || psaCert.ImageBack || null,
-      // Spec number for population lookups
-      specNumber: psaCert.SpecNumber || "",
-      specID: psaCert.SpecID || "",
-      // PSA estimated value if available
-      psaEstimate: psaCert.PSAEstimate || null,
-      population: psaCert.TotalPopulation || null,
-      populationHigher: psaCert.TotalPopulationWithHigher || null,
-      // Validity
+      certNumber: certNum,
+      year: psaCert.Year || psaCert.year || "",
+      brand: psaCert.Brand || psaCert.brand || "",
+      subject: psaCert.Subject || psaCert.subject || "",
+      cardNumber: psaCert.CardNumber || psaCert.cardNumber || "",
+      category: psaCert.Category || psaCert.category || "",
+      grade: psaCert.CardGrade || psaCert.cardGrade || psaCert.GradeDescription || "",
+      labelType: psaCert.LabelType || psaCert.labelType || "",
+      variety: psaCert.Variety || psaCert.variety || "",
+      imageFront: imageFront,
+      imageBack: psaCert.ImageBackSmall || psaCert.ImageBack || psaCert.imageBackSmall || null,
+      // Constructed image URL as fallback
+      imageFrontConstructed: `${psaImageBase}/small_front.jpg`,
+      specNumber: psaCert.SpecNumber || psaCert.specNumber || "",
+      specID: psaCert.SpecID || psaCert.specID || "",
+      psaEstimate: psaCert.PSAEstimate || psaCert.psaEstimate || null,
+      population: psaCert.TotalPopulation || psaCert.totalPopulation || null,
+      populationHigher: psaCert.TotalPopulationWithHigher || psaCert.totalPopulationWithHigher || null,
       valid: data.IsValidRequest || false,
+      // Include raw keys for debugging
+      _rawKeys: Object.keys(psaCert),
     };
 
     return NextResponse.json(result);

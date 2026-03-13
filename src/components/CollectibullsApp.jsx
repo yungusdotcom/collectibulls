@@ -483,7 +483,9 @@ function VaultScreen({ sharedCards, setSharedCards }) {
       // Auto-populate fields from PSA data
       const title = [data.year, data.brand, data.subject, data.cardNumber ? `#${data.cardNumber}` : ""].filter(Boolean).join(" ");
       if (title) setAddName(title);
-      if (data.imageFront) setAddImage(data.imageFront);
+      // Try the API image first, then the constructed URL
+      const imgUrl = data.imageFront || data.imageFrontConstructed;
+      if (imgUrl) setAddImage(imgUrl);
       if (data.grade) {
         const gradeNum = data.grade.match(/[\d.]+/)?.[0] || "";
         const gradeLabel = data.grade;
